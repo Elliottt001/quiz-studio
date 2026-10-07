@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: xlab-annual-quiz
+    runtime: node
+    plan: starter
+    buildCommand: npm run build && npm run check
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /var/data
+      - key: TRUSTED_HTTPS_PROXY
+        value: "1"
+      - key: PUBLIC_ORIGIN
+        value: https://x-lab.game.elliotttzhang.cn
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+    disk:
+      name: xlab-game-data
+      mountPath: /var/data
+      sizeGB: 1

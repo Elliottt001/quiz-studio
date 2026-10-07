@@ -84,6 +84,8 @@ test("only admin can export the audit package and it includes confirmed submissi
     assert.equal(response.headers.get("cache-control"), "no-store");
     const exported = await response.json();
     assert.equal(exported.players[0].id, id);
+    assert.equal("password_hash" in exported.players[0], false);
+    assert.equal("login_code" in exported.players[0], false);
     assert.equal(exported.submissions[0].request_key, "once");
     assert.ok(Array.isArray(exported.audit));
   } finally {

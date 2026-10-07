@@ -10,7 +10,7 @@ export function registerStandingsRoutes(app) {
   app.route("GET", /^\/api\/admin\/export$/, (ctx) => {
     requireAdmin(ctx);
     const tables = {
-      players: "SELECT * FROM players ORDER BY id",
+      players: "SELECT id,real_name,nickname,grade,team,created_at FROM players ORDER BY id",
       rounds: "SELECT * FROM rounds ORDER BY id",
       questions: "SELECT * FROM questions ORDER BY round_id,position",
       submissions: "SELECT * FROM submissions ORDER BY player_id,round_id,revision",

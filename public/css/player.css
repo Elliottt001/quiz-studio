@@ -85,6 +85,10 @@ option { background: #102550; color: #fff; }
 .recovery-form { display: flex; gap: 12px; align-items: end; margin-top: 17px; }
 .recovery-form .field { flex: 1; }
 .fineprint { margin-top: 35px; color: #698cad; font-size: 11px; letter-spacing: .11em; }
+.fineprint strong { color: #d0f9ff; letter-spacing: .16em; font-family: "DIN Alternate",sans-serif; }
+.fineprint a { color:#a6ecf5; }
+#show-login-button { margin:0 0 22px; }
+#show-register-button { margin-top:18px; }
 .notice { margin-bottom: 15px; padding: 12px 16px; border-radius: 10px; color: #ffe6b1; background: rgba(255,178,89,.1); border: 1px solid rgba(255,184,89,.28); }
 .profile-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .profile-top h2 { margin: 7px 0 3px; overflow-wrap: anywhere; }

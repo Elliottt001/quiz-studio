@@ -24,10 +24,12 @@ test("two players complete four admin-started rounds and draw distinct small/gra
   };
   try {
     const first = await request("/api/players", "POST", {
-      realName: "甲同学", nickname: "STAR", grade: 2025, team: "software"
+      realName: "甲同学", nickname: "STAR", grade: 2025, team: "software",
+      password: "first-test-password"
     });
     const second = await request("/api/players", "POST", {
-      realName: "乙同学", nickname: "STAR", grade: 2024, team: "hardware"
+      realName: "乙同学", nickname: "STAR", grade: 2024, team: "hardware",
+      password: "second-test-password"
     });
     assert.equal(first.status, 201);
     assert.equal(second.status, 201);

@@ -3,7 +3,7 @@ import { restoredAnswers, submitButtonState } from "./submit-state.mjs";
 import { shortPlayerId } from "./public-identity.mjs";
 
 const $ = (id) => document.getElementById(id);
-const views = ["register", "lobby", "quiz", "results"];
+const views = ["register", "login", "lobby", "quiz", "results"];
 let player = null;
 let gameState = null;
 let standings = [];
@@ -36,11 +36,13 @@ function element(tag, className, text) {
 
 function setPlayer(profile) {
   player = profile;
+  $("switch-account-button").hidden = false;
   $("lobby-title").textContent = profile.nickname;
   $("real-name-label").textContent = profile.realName;
   $("player-id-label").textContent = `ID ${shortPlayerId(profile.id)}`;
   $("grade-label").textContent = `${profile.grade} 级`;
   $("team-label").textContent = teamNames[profile.team] ?? profile.team;
+  $("login-code-label").textContent = profile.loginCode ?? "请联系管理员恢复";
   view("lobby");
   void refresh();
 }
@@ -50,6 +52,7 @@ async function loadPlayer() {
     setPlayer(await api("/api/me"));
   } catch (error) {
     if (error.status !== 401) notice(error.message);
+    $("switch-account-button").hidden = true;
     view("register");
   }
 }
@@ -284,16 +287,46 @@ $("register-form").addEventListener("submit", async (event) => {
   button.disabled = true;
   try {
     const fields = Object.fromEntries(new FormData(event.currentTarget));
-    await api("/api/players", { method: "POST", body: { ...fields, grade: Number(fields.grade) } });
+    const registration = await api("/api/players", { method: "POST", body: { ...fields, grade: Number(fields.grade) } });
+    setPlayer(await api("/api/me"));
+    notice(`注册成功。你的登录码是 ${registration.loginCode}。请自行保存，换电脑时与密码一起使用。`);
+  } catch (error) { notice(error.message); } finally { button.disabled = false; }
+});
+$("login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector("button");
+  button.disabled = true;
+  try {
+    const fields = Object.fromEntries(new FormData(form));
+    await api("/api/players/login", { method: "POST", body: fields });
+    form.reset();
     setPlayer(await api("/api/me"));
     notice("");
   } catch (error) { notice(error.message); } finally { button.disabled = false; }
 });
+$("show-login-button").addEventListener("click", () => view("login"));
+$("show-register-button").addEventListener("click", () => view("register"));
+async function logout() {
+  try {
+    await api("/api/players/logout", { method: "POST", body: {} });
+    player = null;
+    currentRound = null;
+    answers = {};
+    gameState = null;
+    standings = [];
+    $("switch-account-button").hidden = true;
+    view("login");
+    notice("已退出。公用电脑可以由下一位玩家登录。");
+  } catch (error) { notice(error.message); }
+}
+$("logout-button").addEventListener("click", logout);
+$("switch-account-button").addEventListener("click", logout);
 $("recovery-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
-    const { code } = Object.fromEntries(new FormData(event.currentTarget));
-    await api("/api/players/recover", { method: "POST", body: { code } });
+    const { code, password } = Object.fromEntries(new FormData(event.currentTarget));
+    await api("/api/players/recover", { method: "POST", body: { code, password } });
     setPlayer(await api("/api/me"));
     notice("");
   } catch (error) { notice(error.message); }

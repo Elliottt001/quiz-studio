@@ -22,6 +22,13 @@ export function validateRegistration(input) {
   return { realName, nickname, grade: input.grade, team: input.team };
 }
 
+export function validatePlayerPassword(password) {
+  if (typeof password !== "string" || password.length < 10 || password.length > 128) {
+    throw httpError(400, "玩家密码需为10–128个字符");
+  }
+  return password;
+}
+
 function createSession(db, playerId, now) {
   const sessionToken = token();
   db.prepare("INSERT INTO sessions(token_hash,player_id,created_at) VALUES(?,?,?)")
@@ -31,13 +38,32 @@ function createSession(db, playerId, now) {
 
 export function registerPlayer(db, input, now) {
   const player = validateRegistration(input);
+  const passwordHash = input.password === undefined ? null : hashAdminPassword(validatePlayerPassword(input.password));
   return transaction(db, () => {
     const playerId = randomUUID();
-    db.prepare("INSERT INTO players(id,real_name,nickname,grade,team,created_at) VALUES(?,?,?,?,?,?)")
-      .run(playerId, player.realName, player.nickname, player.grade, player.team, now);
+    const loginCode = randomBytes(8).toString("hex").toUpperCase();
+    db.prepare(`INSERT INTO players(id,real_name,nickname,grade,team,created_at,login_code,password_hash)
+      VALUES(?,?,?,?,?,?,?,?)`)
+      .run(playerId, player.realName, player.nickname, player.grade, player.team, now, loginCode, passwordHash);
     db.prepare("INSERT INTO eligibility(player_id,updated_at) VALUES(?,?)").run(playerId, now);
-    return { playerId, sessionToken: createSession(db, playerId, now) };
+    return { playerId, loginCode, sessionToken: createSession(db, playerId, now) };
   });
+}
+
+export function loginPlayer(db, loginCode, password, now) {
+  const normalized = typeof loginCode === "string" ? loginCode.trim().toUpperCase() : "";
+  const account = db.prepare("SELECT id,password_hash FROM players WHERE login_code=?").get(normalized);
+  if (!account?.password_hash || !verifyAdminPassword(password, account.password_hash)) {
+    throw httpError(401, "登录码或密码错误，请向现场工作人员核对");
+  }
+  return { playerId: account.id, sessionToken: createSession(db, account.id, now) };
+}
+
+export function logoutPlayer(db, sessionToken, now) {
+  if (!sessionToken) throw httpError(401, "未登录");
+  const result = db.prepare("UPDATE sessions SET revoked_at=? WHERE token_hash=? AND revoked_at IS NULL")
+    .run(now, digest(sessionToken));
+  if (!result.changes) throw httpError(401, "登录已失效");
 }
 
 export function resolvePlayer(db, sessionToken) {
@@ -71,6 +97,14 @@ export function redeemRecoveryCode(db, code, now) {
   });
 }
 
+export function setRecoveredPassword(db, playerId, password) {
+  const passwordHash = hashAdminPassword(validatePlayerPassword(password));
+  const loginCode = db.prepare("SELECT login_code FROM players WHERE id=?").get(playerId)?.login_code;
+  if (!loginCode) throw httpError(404, "玩家不存在");
+  db.prepare("UPDATE players SET password_hash=? WHERE id=?").run(passwordHash, playerId);
+  return loginCode;
+}
+
 export function hashAdminPassword(password, salt = randomBytes(16).toString("hex")) {
   return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
 }
@@ -88,6 +122,12 @@ export function createAdminSession(db, now) {
   db.prepare("INSERT INTO admin_sessions(token_hash,created_at,expires_at) VALUES(?,?,?)")
     .run(digest(sessionToken), now, now + 8 * 60 * 60_000);
   return sessionToken;
+}
+
+export function logoutAdmin(db, sessionToken) {
+  if (!sessionToken) throw httpError(401, "管理员尚未登录");
+  const result = db.prepare("DELETE FROM admin_sessions WHERE token_hash=?").run(digest(sessionToken));
+  if (!result.changes) throw httpError(401, "管理员登录已失效");
 }
 
 export function cookieValue(req, name) {

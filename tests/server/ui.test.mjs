@@ -12,6 +12,12 @@ test("the player page exposes the four-field entry flow at a mobile viewport", a
     for (const name of ["真名", "昵称", "年级", "团队", "进入游戏"]) {
       assert.ok(html.includes(name), `${name} must be visible in the entry page`);
     }
+    assert.match(html, /已有账号登录/);
+    assert.match(html, /name="password"/);
+    assert.match(html, /id="login-form"/);
+    assert.match(html, /id="logout-button"/);
+    assert.match(html, /id="switch-account-button"/);
+    assert.match(html, /href="\/admin\.html"/);
     assert.match(html, /name="viewport"/);
     assert.match(html, /infinity-ribbon\.webp/);
     assert.ok(!html.includes("地点地点地点"));

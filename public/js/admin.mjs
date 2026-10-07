@@ -247,8 +247,18 @@ $("login-form").addEventListener("submit", async (event) => {
     $("admin-password").value = "";
     $("login-view").hidden = true;
     $("dashboard").hidden = false;
+    $("admin-logout").hidden = false;
     message("");
     await refresh();
+  } catch (error) { message(error.message, true); }
+});
+$("admin-logout").addEventListener("click", async () => {
+  try {
+    await api("/api/admin/logout", { method: "POST", body: {} });
+    $("dashboard").hidden = true;
+    $("login-view").hidden = false;
+    $("admin-logout").hidden = true;
+    message("管理员已退出，公用电脑可由下一位玩家登录。");
   } catch (error) { message(error.message, true); }
 });
 
@@ -329,6 +339,7 @@ async function boot() {
     await api("/api/admin/session");
     $("login-view").hidden = true;
     $("dashboard").hidden = false;
+    $("admin-logout").hidden = false;
     await refresh();
   } catch {
     $("login-view").hidden = false;

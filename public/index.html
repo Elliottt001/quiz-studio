@@ -13,6 +13,10 @@
     <header class="site-header">
       <a class="lab-mark" href="/" aria-label="X-Lab 无限游戏首页"><img src="/brand/xlab-mark.webp" alt="浙江大学启真交叉学科创新创业实验室"></a>
       <span class="header-edition">2026 · X-LAB ANNUAL GAME</span>
+      <nav class="entry-links" aria-label="账号入口">
+        <a href="/admin.html">管理员登录</a>
+        <button id="switch-account-button" type="button" hidden>退出／切换账号</button>
+      </nav>
     </header>
     <div class="shell">
       <aside class="hero" aria-label="无限游戏年度大会">
@@ -28,22 +32,37 @@
         <section id="register-view" class="surface" aria-labelledby="register-title">
           <div class="section-overline"><span>01 / PLAYER ENTRY</span><span>创建玩家档案</span></div>
           <h2 id="register-title">加入这一局<span class="glow-dot">.</span></h2>
-          <p class="section-copy">使用真实资料登记，昵称将在大屏上更醒目地展示。注册后即自动登录。</p>
+          <p class="section-copy">注册后会得到独立登录码。用登录码和自设密码，可在个人或公用电脑登录原账号。</p>
+          <button id="show-login-button" type="button" class="outline-button">已有账号登录</button>
           <form id="register-form" method="post" action="/api/players" class="field-grid">
             <label class="field"><span>真名 <em>REAL NAME</em></span><input id="real-name" name="realName" autocomplete="name" maxlength="40" placeholder="用于中奖身份核验" required></label>
             <label class="field"><span>昵称 <em>PLAYER NAME</em></span><input id="nickname" name="nickname" maxlength="24" placeholder="大屏上你的名字" required></label>
             <label class="field"><span>年级 <em>GRADE</em></span><select id="grade" name="grade" required><option value="" disabled selected>选择年级</option><option value="2019">2019 级</option><option value="2020">2020 级</option><option value="2021">2021 级</option><option value="2022">2022 级</option><option value="2023">2023 级</option><option value="2024">2024 级</option><option value="2025">2025 级</option></select></label>
             <label class="field"><span>团队 <em>TEAM</em></span><select id="team" name="team" required><option value="" disabled selected>选择团队</option><option value="software">软件团队</option><option value="hardware">硬件团队</option><option value="operations">运营团队</option><option value="design">设计团队</option></select></label>
+            <label class="field full-width"><span>设置密码 <em>PASSWORD</em></span><input id="player-password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" placeholder="至少10位；切勿告诉他人" required></label>
             <button class="primary-button full-width" type="submit"><span>进入游戏</span><span aria-hidden="true">↗</span></button>
           </form>
           <details class="recovery">
             <summary>换了手机？恢复原来的玩家档案</summary>
             <form id="recovery-form" method="post" action="/api/players/recover" class="recovery-form">
               <label class="field"><span>现场工作人员提供的恢复码</span><input name="code" autocomplete="off" placeholder="输入一次性恢复码" required></label>
+              <label class="field"><span>设置新密码（10位以上）</span><input name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label>
               <button type="submit" class="outline-button">恢复原账号</button>
             </form>
           </details>
           <p class="fineprint">一人一个账号 · 四轮答题 · 每题 10 分</p>
+        </section>
+        <section id="login-view" class="surface" hidden aria-labelledby="login-title">
+          <div class="section-overline"><span>02 / RETURNING PLAYER</span><span>回到原来的存档</span></div>
+          <h2 id="login-title">继续这一局<span class="glow-dot">.</span></h2>
+          <p class="section-copy">在任何电脑上输入你的登录码和密码。公用电脑答完后务必退出账号。</p>
+          <form id="login-form" method="post" action="/api/players/login" class="field-grid">
+            <label class="field full-width"><span>登录码 <em>PLAYER CODE</em></span><input name="loginCode" autocomplete="username" placeholder="注册时获得的16位登录码" maxlength="16" required></label>
+            <label class="field full-width"><span>密码 <em>PASSWORD</em></span><input name="password" type="password" autocomplete="current-password" required></label>
+            <button class="primary-button full-width" type="submit">登录原账号 ↗</button>
+          </form>
+          <button id="show-register-button" type="button" class="text-button">首次参加？注册玩家档案</button>
+          <p class="fineprint">管理员可在<a href="/admin.html">后台入口</a>登录。</p>
         </section>
         <section id="lobby-view" class="surface" hidden aria-labelledby="lobby-title">
           <div class="section-overline"><span>PLAYER PROFILE</span><span id="player-id-label">编号</span></div>
@@ -52,9 +71,10 @@
             <div class="score-orb"><strong id="total-score">0</strong><span>积分</span></div>
           </div>
           <div class="profile-meta"><span id="grade-label"></span><span id="team-label"></span><span id="ball-label">预计 10 颗球</span></div>
+          <p class="fineprint">你的登录码：<strong id="login-code-label"></strong>。请单独保存，不要发到群里。</p>
           <div class="section-divider"><span>四章节 / GAME MAP</span><span id="progress-label">等待开始</span></div>
           <div id="round-list" class="round-list"></div>
-          <div class="lobby-actions"><button id="practice-button" class="outline-button" type="button">体验不计分练习 →</button><button id="standings-button" class="text-button" type="button">查看已公布排名 ↗</button></div>
+          <div class="lobby-actions"><button id="practice-button" class="outline-button" type="button">体验不计分练习 →</button><button id="standings-button" class="text-button" type="button">查看已公布排名 ↗</button><button id="logout-button" class="text-button" type="button">退出账号</button></div>
           <div id="practice-panel" class="practice-panel" hidden><strong>练习题 · 不计分</strong><p>今天的答题分为几轮？</p><div class="practice-options"><button type="button" data-practice="3">三轮</button><button type="button" data-practice="4">四轮</button></div><p id="practice-feedback" role="status"></p></div>
         </section>
         <section id="quiz-view" class="surface quiz-surface" hidden aria-labelledby="quiz-title">

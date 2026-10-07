@@ -1,5 +1,7 @@
 # GitHub Pages 与火山引擎 DNS 配置
 
+> 历史部署说明：这里的 GitHub Pages 配置目前只提供临时说明页。用户已要求该域名承载完整答题游戏，迁移步骤以 [cloud-deploy.md](/Users/bytedance/Projects/xlab-annual-quiz/docs/cloud-deploy.md) 为准。完成云服务验证后，需将当前火山引擎 CNAME 从 GitHub 改到云服务；**不能继续按本文将域名指向 Pages 并期待答题功能工作。**
+
 公开地址：`x-lab.game.elliotttzhang.cn`
 
 ## 发布内容与运行边界
