@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0b1235">
+    <title>现场控制台 · X-Lab 无限游戏</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <script type="module" src="/js/admin.mjs"></script>
+  </head>
+  <body>
+    <div class="ambient-dots" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="lab-mark" href="/" aria-label="玩家入口"><img src="/brand/xlab-mark.webp" alt="浙江大学启真交叉学科创新创业实验室"></a>
+      <nav class="admin-nav"><a href="/display.html" target="_blank" rel="noopener">打开大屏 ↗</a><a href="/" target="_blank" rel="noopener">玩家入口 ↗</a></nav>
+    </header>
+    <main class="admin-shell">
+      <section class="admin-intro">
+        <div class="overline">CONTROL DECK / 2026 X-LAB</div>
+        <h1>现场<span>控制台</span><i>.</i></h1>
+        <p>手动开启每轮。服务器从实际开始计满五分钟，自动收卷、计分和公布。</p>
+      </section>
+      <div id="admin-notice" class="admin-notice" role="status" hidden></div>
+      <section id="login-view" class="admin-panel login-panel">
+        <div class="panel-head"><span>ACCESS 00</span><span>仅授权操作员</span></div>
+        <h2>管理员登录</h2>
+        <form id="login-form" class="inline-form"><label>现场管理员口令<input id="admin-password" type="password" name="password" autocomplete="current-password" required></label><button type="submit" class="action primary">进入控制台 ↗</button></form>
+        <p class="help">玩家账号不能进入后台。管理员口令在现场主机配置，不写入网页或仓库。</p>
+      </section>
+      <div id="dashboard" class="dashboard" hidden>
+        <div class="metric-row"><div class="metric"><span>注册玩家</span><strong id="registered-count">0</strong></div><div class="metric"><span>当前状态</span><strong id="current-status">待命</strong></div><div class="metric"><span>本轮提交</span><strong id="submitted-count">0</strong></div><div class="metric"><span>奖池小球</span><strong id="balls-count">未冻结</strong></div></div>
+        <div class="dashboard-grid">
+          <section class="admin-panel" id="round-panel">
+            <div class="panel-head"><span>01 / GAME FLOW</span><span>只在点击时开始</span></div>
+            <h2>四轮控场</h2>
+            <p class="help">不按议程自动开启。开始后保存实际截止时刻，刷新后台也不会重新计时。</p>
+            <div class="round-actions" id="round-actions">
+              <div class="round-action" data-round="1"><div><b>01 回望来时路</b><small>6 题 · 5 分钟</small></div><span class="status-label">未开始</span><button class="action primary" type="button" data-start="1">开始第一轮</button><button class="action ghost" type="button" data-void="1">作废</button></div>
+              <div class="round-action" data-round="2"><div><b>02 认识 X-Lab</b><small>10 题 · 5 分钟</small></div><span class="status-label">未开始</span><button class="action primary" type="button" data-start="2">开始第二轮</button><button class="action ghost" type="button" data-void="2">作废</button></div>
+              <div class="round-action" data-round="3"><div><b>03 发现更多可能</b><small>9 题 · 5 分钟</small></div><span class="status-label">未开始</span><button class="action primary" type="button" data-start="3">开始第三轮</button><button class="action ghost" type="button" data-void="3">作废</button></div>
+              <div class="round-action" data-round="4"><div><b>04 我们的共同记忆</b><small>5 题 · 5 分钟</small></div><span class="status-label">未开始</span><button class="action primary" type="button" data-start="4">开始第四轮</button><button class="action ghost" type="button" data-void="4">作废</button></div>
+            </div>
+          </section>
+          <section class="admin-panel">
+            <div class="panel-head"><span>02 / QUESTION BANK</span><span id="question-count">尚未导入</span></div>
+            <h2>正式题库</h2>
+            <p class="help">导入审核后的 JSON：6／10／9／5 共 30 题。最后一题是感受填空；任一轮开始后题库锁定。</p>
+            <label class="file-label">选择题库 JSON 文件<input id="question-file" type="file" accept=".json,application/json"></label>
+            <textarea id="question-json" class="json-input" spellcheck="false" placeholder='{"questions":[{"id":"q1","roundId":1,"position":1,"kind":"choice","prompt":"...","options":["A","B","C","D"],"correctOption":0,"source":"...","explanation":"..."}]}'></textarea>
+            <button id="import-button" class="action secondary" type="button">导入题库 ↗</button>
+            <p id="question-summary" class="help">请先审核每题来源与标准答案。</p>
+          </section>
+          <section class="admin-panel">
+            <div class="panel-head"><span>03 / PLAYERS & POINTS</span><span>中奖时再核验本人</span></div>
+            <h2>玩家与积分</h2>
+            <label class="search-field">搜索真名、昵称或 ID<input id="player-search" type="search" placeholder="搜索玩家"></label>
+            <div id="players-list" class="players-list"></div>
+            <form id="bonus-form" class="bonus-form">
+              <strong>登记 +10 分</strong>
+              <label>玩家 ID<input name="playerId" id="bonus-player" placeholder="从玩家列表点选" required></label>
+              <label>事由<select name="kind"><option value="speaking">实质性分享</option><option value="work">工作人员任务</option></select></label>
+              <label>具体说明<input name="reason" placeholder="环节及贡献" required></label>
+              <button class="action secondary" type="submit">审核并加分</button>
+            </form>
+          </section>
+          <section class="admin-panel">
+            <div class="panel-head"><span>04 / PRIZE SETUP</span><span>冻结前配置</span></div>
+            <h2>奖品与开奖</h2>
+            <form id="prize-form" class="prize-form">
+              <label>三等奖名称<input name="thirdTitle" placeholder="按真实奖品填写" required></label><label>数量<input name="thirdCount" type="number" min="0" max="200" value="0" required></label>
+              <label>二等奖名称<input name="secondTitle" placeholder="按真实奖品填写" required></label><label>数量<input name="secondCount" type="number" min="0" max="200" value="0" required></label>
+              <label>大奖名称<input name="grandTitle" placeholder="按真实奖品填写" required></label><label>数量<input name="grandCount" type="number" min="0" max="200" value="0" required></label>
+              <button class="action secondary" type="submit">保存奖品配置</button>
+            </form>
+            <div class="freeze-row"><p id="freeze-label">当前奖池未冻结</p><button id="freeze-button" class="action primary" type="button">核对后冻结奖池</button></div>
+            <div id="prize-actions" class="prize-actions"></div>
+          </section>
+          <section class="admin-panel audit-panel">
+            <div class="panel-head"><span>05 / AUDIT LOG</span><span>最近操作</span></div>
+            <h2>执行记录</h2>
+            <ol id="audit-list" class="audit-list"></ol>
+          </section>
+        </div>
+      </div>
+    </main>
+    <footer class="site-footer"><span>∞ X-LAB · OPERATOR ONLY</span><span>所有关键操作保留记录</span></footer>
+  </body>
+</html>

@@ -50,6 +50,16 @@ export function markAttendance(db, playerId, adminId, now) {
     .run("attendance_confirmed", adminId, playerId, now);
 }
 
+export function grantWorkOverride(db, playerId, reason, adminId, now) {
+  ensureMutable(db);
+  if (typeof reason !== "string" || !reason.trim()) throw httpError(400, "请填写工作资格依据");
+  const result = db.prepare(`UPDATE eligibility SET checked_in=1,eligible_override=1,reason=?,updated_at=?
+    WHERE player_id=?`).run(reason.trim(), now, playerId);
+  if (!result.changes) throw httpError(404, "玩家不存在");
+  db.prepare("INSERT INTO audit_events(kind,actor_id,target_id,details_json,occurred_at) VALUES(?,?,?,?,?)")
+    .run("work_override", adminId, playerId, JSON.stringify({ reason: reason.trim() }), now);
+}
+
 export function excludePlayer(db, playerId, reason, adminId, now = Date.now()) {
   ensureMutable(db);
   if (typeof reason !== "string" || !reason.trim()) throw httpError(400, "请填写排除原因");
@@ -111,8 +121,9 @@ export function freezePool(db, adminId, now = Date.now()) {
     const invalidQuiz = db.prepare(`SELECT COUNT(*) AS count FROM round_scores s
       JOIN rounds r ON r.id=s.round_id WHERE r.status='published'`).get().count === 0;
     const eligible = db.prepare(`SELECT p.id FROM players p JOIN eligibility e ON e.player_id=p.id
-      WHERE e.checked_in=1 AND e.excluded=0 AND (
-        e.eligible_override=1 OR EXISTS(SELECT 1 FROM submissions s WHERE s.player_id=p.id)
+      WHERE e.excluded=0 AND (
+        EXISTS(SELECT 1 FROM submissions s WHERE s.player_id=p.id)
+        OR (e.checked_in=1 AND e.eligible_override=1)
       ) ORDER BY p.id`).all();
     if (!eligible.length) throw httpError(409, "没有合资格的抽奖参与者");
     const prizeCount = db.prepare("SELECT COUNT(*) AS count FROM prizes").get().count;

@@ -25,3 +25,23 @@ test("the player page exposes the four-field entry flow at a mobile viewport", a
     fixture.close();
   }
 });
+
+test("operator and stage pages are separate responsive views without public edit controls", async () => {
+  const fixture = newTestDb();
+  const app = buildApp(fixture.db, () => 100);
+  const url = await app.listen(0, "127.0.0.1");
+  try {
+    const admin = await (await fetch(`${url}/admin.html`)).text();
+    const stage = await (await fetch(`${url}/display.html`)).text();
+    assert.match(admin, /name="viewport"/);
+    assert.match(admin, /开始第一轮/);
+    assert.match(admin, /导入题库/);
+    assert.match(stage, /infinity-ribbon\.webp/);
+    assert.match(stage, /开奖/);
+    assert.ok(!stage.includes("导入题库"));
+    assert.ok(!stage.includes("地点地点地点"));
+  } finally {
+    await app.close();
+    fixture.close();
+  }
+});

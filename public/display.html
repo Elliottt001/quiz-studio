@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0b1235">
+    <title>现场大屏 · X-Lab 无限游戏</title>
+    <link rel="stylesheet" href="/css/display.css">
+    <script type="module" src="/js/display.mjs"></script>
+  </head>
+  <body>
+    <div class="ambient-dots" aria-hidden="true"></div>
+    <div class="display-shell">
+      <header class="display-header">
+        <img src="/brand/xlab-mark.webp" alt="浙江大学启真交叉学科创新创业实验室">
+        <span>2026 X-LAB 年度大会 <i></i> PLAY THE INFINITE</span>
+      </header>
+      <main class="stage" aria-live="polite">
+        <div class="stage-art" aria-hidden="true"><img src="/brand/infinity-ribbon.webp" alt=""></div>
+        <div class="stage-copy">
+          <div id="stage-kicker" class="stage-kicker">READY TO PLAY / 2026</div>
+          <h1 id="stage-title">无限游戏</h1>
+          <p id="stage-subtitle">连接会场校网，打开微信群中的游戏链接，加入这场游戏。</p>
+          <div class="stage-time-wrap"><div id="stage-timer" class="stage-timer" hidden>05:00</div><div id="stage-status" class="stage-status">等待管理员开启第一轮</div></div>
+          <div id="stage-board" class="stage-board" hidden></div>
+          <div id="stage-winner" class="stage-winner" aria-label="现场开奖" hidden>
+            <span id="winner-prize"></span>
+            <strong id="winner-nickname"></strong>
+            <small id="winner-realname"></small>
+            <p id="winner-ball"></p>
+          </div>
+        </div>
+      </main>
+      <footer class="display-footer">
+        <div><span class="pulse"></span><span id="stage-players">0 位玩家已加入</span></div>
+        <span id="stage-link">打开微信群中的游戏链接</span>
+        <span>局无终点，我们继续 PLAY</span>
+      </footer>
+    </div>
+  </body>
+</html>

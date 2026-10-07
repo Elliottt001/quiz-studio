@@ -112,3 +112,18 @@ export function publicQuestions(db, roundId) {
     } : {})
   }));
 }
+
+export function voidRound(db, id, reason, adminId, now = Date.now()) {
+  return transaction(db, () => {
+    if (db.prepare("SELECT 1 FROM freeze_snapshots LIMIT 1").get()) {
+      throw httpError(409, "奖池冻结后不能作废轮次");
+    }
+    if (typeof reason !== "string" || !reason.trim()) throw httpError(400, "请填写作废原因");
+    const result = db.prepare("UPDATE rounds SET status='voided' WHERE id=? AND status IN ('open','published')")
+      .run(id);
+    if (!result.changes) throw httpError(409, "本轮不能作废");
+    db.prepare("INSERT INTO audit_events(kind,actor_id,target_id,details_json,occurred_at) VALUES(?,?,?,?,?)")
+      .run("round_voided", adminId, String(id), JSON.stringify({ reason: reason.trim() }), now);
+    return getRoundState(db, id);
+  });
+}

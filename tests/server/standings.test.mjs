@@ -97,3 +97,16 @@ test("voiding every round activates the equal-ball fallback even if old scores r
     assert.equal(freezePool(db, "admin", 303_000).entries[0].balls, 1);
   } finally { fixture.close(); }
 });
+
+test("a submitted player joins the provisional pool without an advance check-in", () => {
+  const fixture = newTestDb();
+  try {
+    const db = fixture.db;
+    const id = registerPlayer(db, person("未签到玩家"), 100).playerId;
+    db.prepare("UPDATE rounds SET status='voided'").run();
+    db.prepare(`INSERT INTO submissions(id,player_id,round_id,request_key,answers_json,revision,submitted_at)
+      VALUES('submitted',?,1,'key','{}',1,200)`).run(id);
+    addPrize(db);
+    assert.deepEqual(freezePool(db, "admin", 300).entries.map((entry) => entry.playerId), [id]);
+  } finally { fixture.close(); }
+});

@@ -2,6 +2,10 @@ import { requireAdmin } from "../auth.mjs";
 import { configurePrizes, drawWinner, listDraws, refusePrize, confirmPrize } from "../draw.mjs";
 
 export function registerDrawRoutes(app) {
+  app.route("GET", /^\/api\/prizes$/, ({ db }) => ({
+    body: { prizes: db.prepare(`SELECT id,tier,title,position FROM prizes
+      ORDER BY CASE tier WHEN 'third' THEN 0 WHEN 'second' THEN 1 ELSE 2 END,position,id`).all() }
+  }));
   app.route("GET", /^\/api\/draws$/, ({ db }) => ({ body: { draws: listDraws(db) } }));
   app.route("POST", /^\/api\/admin\/prizes$/, (ctx) => {
     const adminId = requireAdmin(ctx);
