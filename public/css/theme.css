@@ -1,0 +1,48 @@
+:root {
+  --ink: #07102e;
+  --navy: #0b1235;
+  --navy-2: #112459;
+  --cyan: #61e7f4;
+  --pale: #f6faff;
+  --muted: #9fb8d9;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { min-width: 320px; background: #09112e; }
+body {
+  margin: 0; min-height: 100vh; color: var(--pale); overflow-x: hidden;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(circle at 75% -15%, #203879 0, transparent 36%),
+    radial-gradient(circle at 2% 75%, #162653 0, transparent 40%),
+    linear-gradient(135deg, #080e2b 3%, #0b1941 55%, #07102e);
+}
+[hidden] { display: none !important; }
+.ambient-dots {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .38;
+  background-image: radial-gradient(circle, rgba(146,223,247,.42) 1.1px, transparent 2px);
+  background-size: 35px 35px;
+  mask-image: radial-gradient(circle at 96% 6%, #000, transparent 26%), radial-gradient(circle at 0 97%, #000, transparent 29%);
+}
+.site-header {
+  width: min(1460px, calc(100% - 64px)); margin: auto; padding-top: 30px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.lab-mark img { display: block; width: 270px; max-width: 45vw; height: auto; mix-blend-mode: screen; }
+.header-edition {
+  color: #91b6dd; font: 700 11px "DIN Alternate", "Avenir Next", sans-serif;
+  letter-spacing: .16em; white-space: nowrap;
+}
+.site-footer {
+  width: min(1460px, calc(100% - 64px)); margin: auto; display: flex;
+  justify-content: space-between; gap: 15px; padding-bottom: 23px;
+  color: #7193bb; font-size: 11px; letter-spacing: .12em;
+}
+button { cursor: pointer; font: inherit; }
+@keyframes beacon { 50% { opacity: .4; transform: scale(.75); } }
+@media (max-width: 820px) {
+  .site-header { width: calc(100% - 34px); padding-top: 16px; }
+  .lab-mark img { width: 205px; }
+  .header-edition { display: none; }
+  .site-footer { width: calc(100% - 26px); }
+}
