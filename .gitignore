@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.superpowers/
+.env
+.env.*
+!.env.example
+data/
+coverage/
+playwright-report/
+test-results/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

@@ -1,0 +1,11 @@
+{
+  "name": "xlab-annual-quiz",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/**/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "start": "node src/server/main.mjs",
+    "dev": "node --watch src/server/main.mjs"
+  }
+}
