@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerIdentityRoutes } from "./routes/identity.mjs";
+import { registerRoundRoutes } from "./routes/rounds.mjs";
 
 const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../public");
 const contentTypes = {
@@ -16,6 +17,8 @@ const contentTypes = {
 
 export function buildApp(db, clock = Date.now, options = {}) {
   const routes = [];
+  const tickers = [];
+  let interval;
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
     if (req.method === "GET" && url.pathname === "/api/health") {
@@ -91,18 +94,29 @@ export function buildApp(db, clock = Date.now, options = {}) {
   });
   const app = {
     route(method, pattern, handler) { routes.push({ method, pattern, handler }); },
+    tick(handler) { tickers.push(handler); },
     listen(port, host = "127.0.0.1") {
       return new Promise((resolve, reject) => {
         server.once("error", reject);
         server.listen(port, host, () => {
           server.removeListener("error", reject);
+          interval = setInterval(() => {
+            for (const tick of tickers) {
+              try { tick({ db, clock }); } catch (error) { console.error("Game tick failed:", error); }
+            }
+          }, 250);
+          interval.unref();
           const address = server.address();
           resolve(`http://${host}:${address.port}`);
         });
       });
     },
-    close() { return new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())); }
+    close() {
+      clearInterval(interval);
+      return new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
   };
   registerIdentityRoutes(app, options);
+  registerRoundRoutes(app, options.scoreRound);
   return app;
 }
