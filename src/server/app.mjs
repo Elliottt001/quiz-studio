@@ -4,6 +4,8 @@ import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerIdentityRoutes } from "./routes/identity.mjs";
 import { registerRoundRoutes } from "./routes/rounds.mjs";
+import { registerAnswerRoutes } from "./routes/answers.mjs";
+import { scoreRound } from "./answers.mjs";
 
 const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../public");
 const contentTypes = {
@@ -117,6 +119,7 @@ export function buildApp(db, clock = Date.now, options = {}) {
     }
   };
   registerIdentityRoutes(app, options);
-  registerRoundRoutes(app, options.scoreRound);
+  registerRoundRoutes(app, scoreRound);
+  registerAnswerRoutes(app, scoreRound);
   return app;
 }
