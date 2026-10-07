@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS prizes (
 );
 CREATE TABLE IF NOT EXISTS draws (
   id TEXT PRIMARY KEY,
-  prize_id TEXT NOT NULL UNIQUE REFERENCES prizes(id),
+  prize_id TEXT NOT NULL REFERENCES prizes(id),
   request_key TEXT NOT NULL UNIQUE,
   player_id TEXT NOT NULL UNIQUE REFERENCES players(id),
   freeze_id TEXT NOT NULL REFERENCES freeze_snapshots(id),
@@ -119,6 +119,8 @@ CREATE TABLE IF NOT EXISTS draws (
   status TEXT NOT NULL DEFAULT 'pending',
   refusal_reason TEXT
 );
+CREATE UNIQUE INDEX IF NOT EXISTS active_prize_draw ON draws(prize_id)
+  WHERE status IN ('pending','claimed');
 CREATE TABLE IF NOT EXISTS audit_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   kind TEXT NOT NULL,

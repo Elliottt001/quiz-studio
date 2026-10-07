@@ -11,6 +11,9 @@ import {
 const person = (name) => ({
   realName: name, nickname: name, grade: 2025, team: "software"
 });
+const addPrize = (db) => db.prepare(
+  "INSERT INTO prizes(id,tier,title,position) VALUES('grand-1','grand','大奖',1)"
+).run();
 
 test("every additional ten points adds one ball and zero points still has ten", () => {
   for (const [score, balls] of [[0, 10], [10, 11], [100, 20], [200, 30], [320, 42]]) {
@@ -56,6 +59,7 @@ test("wrong question is zeroed for everyone and frozen pool ignores excluded and
     voidQuestion(db, "q1", "题意不清", "admin", 302_002);
     assert.equal(listStandings(db).find((p) => p.id === a).score, 10);
     assert.equal(listStandings(db).find((p) => p.id === b).score, 0);
+    addPrize(db);
     const frozen = freezePool(db, "admin", 303_000);
     assert.deepEqual(frozen.entries.map((p) => [p.playerId, p.balls]), [[a, 11]]);
     assert.throws(() => addBonus(db, a, "work", 10, "迟报", "admin", 303_001), /冻结/);
@@ -72,6 +76,7 @@ test("all-invalid quiz gives each qualified person one equal ball", () => {
       markAttendance(fixture.db, id, "admin", 200);
       fixture.db.prepare("UPDATE eligibility SET eligible_override=1 WHERE player_id=?").run(id);
     }
+    addPrize(fixture.db);
     const frozen = freezePool(fixture.db, "admin", 300);
     assert.deepEqual(frozen.entries.map((p) => p.balls), [1, 1]);
   } finally { fixture.close(); }
@@ -88,6 +93,7 @@ test("voiding every round activates the equal-ball fallback even if old scores r
     settleDueRounds(db, 301_000, scoreRound);
     db.prepare("UPDATE rounds SET status='voided'").run();
     markAttendance(db, id, "admin", 302_000);
+    addPrize(db);
     assert.equal(freezePool(db, "admin", 303_000).entries[0].balls, 1);
   } finally { fixture.close(); }
 });

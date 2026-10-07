@@ -115,6 +115,9 @@ export function freezePool(db, adminId, now = Date.now()) {
         e.eligible_override=1 OR EXISTS(SELECT 1 FROM submissions s WHERE s.player_id=p.id)
       ) ORDER BY p.id`).all();
     if (!eligible.length) throw httpError(409, "没有合资格的抽奖参与者");
+    const prizeCount = db.prepare("SELECT COUNT(*) AS count FROM prizes").get().count;
+    if (!prizeCount) throw httpError(409, "请先配置抽奖奖品");
+    if (prizeCount > eligible.length) throw httpError(409, "奖品数量超过合资格人数");
     const entries = eligible.map(({ id }) => {
       const row = standing.get(id);
       return {

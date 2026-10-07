@@ -7,6 +7,7 @@ import { registerRoundRoutes } from "./routes/rounds.mjs";
 import { registerAnswerRoutes } from "./routes/answers.mjs";
 import { scoreRound } from "./answers.mjs";
 import { registerStandingsRoutes } from "./routes/standings.mjs";
+import { registerDrawRoutes } from "./routes/draw.mjs";
 
 const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../public");
 const contentTypes = {
@@ -123,5 +124,6 @@ export function buildApp(db, clock = Date.now, options = {}) {
   registerRoundRoutes(app, scoreRound);
   registerAnswerRoutes(app, scoreRound);
   registerStandingsRoutes(app);
+  registerDrawRoutes(app);
   return app;
 }
