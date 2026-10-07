@@ -24,7 +24,7 @@
       <section id="login-view" class="admin-panel login-panel">
         <div class="panel-head"><span>ACCESS 00</span><span>仅授权操作员</span></div>
         <h2>管理员登录</h2>
-        <form id="login-form" class="inline-form"><label>现场管理员口令<input id="admin-password" type="password" name="password" autocomplete="current-password" required></label><button type="submit" class="action primary">进入控制台 ↗</button></form>
+        <form id="login-form" method="post" action="/api/admin/login" class="inline-form"><label>现场管理员口令<input id="admin-password" type="password" name="password" autocomplete="current-password" required></label><button type="submit" class="action primary">进入控制台 ↗</button></form>
         <p class="help">玩家账号不能进入后台。管理员口令在现场主机配置，不写入网页或仓库。</p>
       </section>
       <div id="dashboard" class="dashboard" hidden>
@@ -49,6 +49,12 @@
             <textarea id="question-json" class="json-input" spellcheck="false" placeholder='{"questions":[{"id":"q1","roundId":1,"position":1,"kind":"choice","prompt":"...","options":["A","B","C","D"],"correctOption":0,"source":"...","explanation":"..."}]}'></textarea>
             <button id="import-button" class="action secondary" type="button">导入题库 ↗</button>
             <p id="question-summary" class="help">请先审核每题来源与标准答案。</p>
+            <div class="question-correction">
+              <strong>作废单题 · 全员重算</strong>
+              <p class="help">确认题目无唯一答案或资料不可用时使用。冻结奖池后禁止改分。</p>
+              <label>选择题目<select id="void-question-id"><option value="">先导入题库</option></select></label>
+              <button id="void-question-button" class="action ghost" type="button">作废单题</button>
+            </div>
           </section>
           <section class="admin-panel">
             <div class="panel-head"><span>03 / PLAYERS & POINTS</span><span>中奖时再核验本人</span></div>
@@ -62,6 +68,11 @@
               <label>具体说明<input name="reason" placeholder="环节及贡献" required></label>
               <button class="action secondary" type="submit">审核并加分</button>
             </form>
+            <div class="bonus-review">
+              <strong>撤销误录加分</strong>
+              <p class="help">仅冻结前可更正，需填写可追溯原因，不删除原记录。</p>
+              <div id="bonus-list" class="bonus-list"></div>
+            </div>
           </section>
           <section class="admin-panel">
             <div class="panel-head"><span>04 / PRIZE SETUP</span><span>冻结前配置</span></div>
@@ -78,6 +89,7 @@
           <section class="admin-panel audit-panel">
             <div class="panel-head"><span>05 / AUDIT LOG</span><span>最近操作</span></div>
             <h2>执行记录</h2>
+            <button id="export-button" class="action secondary" type="button">下载核分与抽奖记录 JSON</button>
             <ol id="audit-list" class="audit-list"></ol>
           </section>
         </div>

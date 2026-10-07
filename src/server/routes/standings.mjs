@@ -1,17 +1,39 @@
 import { requireAdmin } from "../auth.mjs";
 import {
-  addBonus, markAttendance, grantWorkOverride, excludePlayer, voidQuestion,
+  addBonus, voidBonus, markAttendance, grantWorkOverride, excludePlayer, voidQuestion,
   listStandings, freezePool, getFreeze
 } from "../standings.mjs";
 
 export function registerStandingsRoutes(app) {
   app.route("GET", /^\/api\/standings$/, ({ db }) => ({ body: { players: listStandings(db) } }));
   app.route("GET", /^\/api\/pool$/, ({ db }) => ({ body: { pool: getFreeze(db) } }));
+  app.route("GET", /^\/api\/admin\/export$/, (ctx) => {
+    requireAdmin(ctx);
+    const tables = {
+      players: "SELECT * FROM players ORDER BY id",
+      rounds: "SELECT * FROM rounds ORDER BY id",
+      questions: "SELECT * FROM questions ORDER BY round_id,position",
+      submissions: "SELECT * FROM submissions ORDER BY player_id,round_id,revision",
+      scores: "SELECT * FROM round_scores ORDER BY player_id,round_id",
+      bonus: "SELECT * FROM bonus_events ORDER BY created_at,id",
+      eligibility: "SELECT * FROM eligibility ORDER BY player_id",
+      frozen: "SELECT * FROM freeze_snapshots ORDER BY created_at,id",
+      prizes: "SELECT * FROM prizes ORDER BY tier,position,id",
+      draws: "SELECT * FROM draws ORDER BY drawn_at,id",
+      audit: "SELECT * FROM audit_events ORDER BY id"
+    };
+    const body = Object.fromEntries(Object.entries(tables)
+      .map(([key, query]) => [key, ctx.db.prepare(query).all()]));
+    body.exportedAt = ctx.clock();
+    return { headers: { "cache-control": "no-store" }, body };
+  });
   app.route("GET", /^\/api\/admin\/players$/, (ctx) => {
     requireAdmin(ctx);
     const scoreById = new Map(listStandings(ctx.db).map((player) => [player.id, player]));
     const rows = ctx.db.prepare(`SELECT p.id,p.real_name,p.nickname,p.grade,p.team,
       e.checked_in,e.eligible_override,e.excluded,e.reason,
+      (SELECT COUNT(*) FROM players another WHERE another.real_name=p.real_name
+        AND another.grade=p.grade AND another.team=p.team) AS same_identity_count,
       EXISTS(SELECT 1 FROM submissions s WHERE s.player_id=p.id) AS submitted
       FROM players p JOIN eligibility e ON e.player_id=p.id ORDER BY p.created_at,p.id`).all();
     return { body: { players: rows.map((row) => ({
@@ -21,6 +43,7 @@ export function registerStandingsRoutes(app) {
       excluded: !!row.excluded,
       reason: row.reason,
       submitted: !!row.submitted,
+      suspectedDuplicate: row.same_identity_count > 1,
       qualified: !row.excluded && (!!row.submitted || (!!row.checked_in && !!row.eligible_override))
     })) } };
   });
@@ -36,6 +59,15 @@ export function registerStandingsRoutes(app) {
     const adminId = requireAdmin(ctx);
     return { body: addBonus(ctx.db, ctx.body.playerId, ctx.body.kind,
       ctx.body.points, ctx.body.reason, adminId, ctx.clock()) };
+  });
+  app.route("GET", /^\/api\/admin\/bonuses$/, (ctx) => {
+    requireAdmin(ctx);
+    return { body: { bonuses: ctx.db.prepare(`SELECT id,player_id,kind,points,reason,
+      actor_id,created_at,voided_at FROM bonus_events ORDER BY created_at DESC,id DESC`).all() } };
+  });
+  app.route("POST", /^\/api\/admin\/bonuses\/([^/]+)\/void$/, (ctx) => {
+    const adminId = requireAdmin(ctx);
+    return { body: voidBonus(ctx.db, ctx.match[1], ctx.body.reason, adminId, ctx.clock()) };
   });
   app.route("POST", /^\/api\/admin\/players\/([^/]+)\/check-in$/, (ctx) => {
     const adminId = requireAdmin(ctx);

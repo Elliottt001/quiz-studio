@@ -3,8 +3,12 @@ import {
   importQuestionBank, startRound, getRoundState, settleDueRounds, publicQuestions, voidRound
 } from "../rounds.mjs";
 
-export function registerRoundRoutes(app, scorer = () => {}) {
-  const settle = ({ db, clock }) => settleDueRounds(db, clock(), scorer);
+export function registerRoundRoutes(app, scorer = () => {}, onCriticalChange) {
+  const settle = ({ db, clock }) => {
+    const ids = settleDueRounds(db, clock(), scorer);
+    if (ids.length) void Promise.resolve(onCriticalChange?.()).catch((error) => console.error("Backup failed:", error));
+    return ids;
+  };
   app.tick(settle);
   app.route("GET", /^\/api\/state$/, (ctx) => {
     settle(ctx);

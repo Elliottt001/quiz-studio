@@ -41,6 +41,20 @@ export function addBonus(db, playerId, kind, points, reason, adminId, now) {
   });
 }
 
+export function voidBonus(db, bonusId, reason, adminId, now) {
+  return transaction(db, () => {
+    ensureMutable(db);
+    if (typeof reason !== "string" || !reason.trim()) throw httpError(400, "请填写撤销原因");
+    const row = db.prepare("SELECT id,player_id,voided_at FROM bonus_events WHERE id=?").get(bonusId);
+    if (!row) throw httpError(404, "加分记录不存在");
+    if (row.voided_at !== null) throw httpError(409, "该加分已撤销");
+    db.prepare("UPDATE bonus_events SET voided_at=? WHERE id=?").run(now, bonusId);
+    db.prepare("INSERT INTO audit_events(kind,actor_id,target_id,details_json,occurred_at) VALUES(?,?,?,?,?)")
+      .run("bonus_voided", adminId, bonusId, JSON.stringify({ playerId: row.player_id, reason: reason.trim() }), now);
+    return { id: bonusId, playerId: row.player_id, voidedAt: now };
+  });
+}
+
 export function markAttendance(db, playerId, adminId, now) {
   ensureMutable(db);
   const result = db.prepare("UPDATE eligibility SET checked_in=1,updated_at=? WHERE player_id=?")
@@ -122,9 +136,10 @@ export function freezePool(db, adminId, now = Date.now()) {
       JOIN rounds r ON r.id=s.round_id WHERE r.status='published'`).get().count === 0;
     const eligible = db.prepare(`SELECT p.id FROM players p JOIN eligibility e ON e.player_id=p.id
       WHERE e.excluded=0 AND (
-        EXISTS(SELECT 1 FROM submissions s WHERE s.player_id=p.id)
+        ?=1
+        OR EXISTS(SELECT 1 FROM submissions s WHERE s.player_id=p.id)
         OR (e.checked_in=1 AND e.eligible_override=1)
-      ) ORDER BY p.id`).all();
+      ) ORDER BY p.id`).all(invalidQuiz ? 1 : 0);
     if (!eligible.length) throw httpError(409, "没有合资格的抽奖参与者");
     const prizeCount = db.prepare("SELECT COUNT(*) AS count FROM prizes").get().count;
     if (!prizeCount) throw httpError(409, "请先配置抽奖奖品");

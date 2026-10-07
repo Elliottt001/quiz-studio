@@ -1,4 +1,5 @@
 import { api, remainingLabel, teamNames } from "./api.mjs";
+import { submitButtonState } from "./submit-state.mjs";
 
 const $ = (id) => document.getElementById(id);
 const views = ["register", "lobby", "quiz", "results"];
@@ -11,6 +12,7 @@ let currentQuestions = [];
 let answers = {};
 let pendingKey = null;
 let pendingAnswers = null;
+let submitInFlight = false;
 let draftTimer = null;
 let showingResultsFor = null;
 
@@ -85,9 +87,12 @@ function updateTimer() {
   const left = currentRound.deadlineAt - (Date.now() + serverOffset);
   $("timer").textContent = remainingLabel(left);
   $("timer").classList.toggle("is-urgent", left <= 30_000);
+  const state = submitButtonState(left, pendingKey, submitInFlight);
+  $("submit-button").disabled = state.disabled;
+  $("submit-button").textContent = state.label;
   if (left <= 0) {
-    $("submit-button").disabled = true;
-    $("submit-state").textContent = "答题截止 · 等待结算";
+    if (!pendingKey) $("submit-state").textContent = "答题截止 · 等待结算";
+    else if (!submitInFlight) $("submit-state").textContent = "答题截止 · 可重试确认原提交";
   }
 }
 
@@ -182,7 +187,8 @@ async function submitRound() {
   clearTimeout(draftTimer);
   pendingKey ??= crypto.randomUUID();
   pendingAnswers ??= { ...answers };
-  $("submit-button").disabled = true;
+  submitInFlight = true;
+  updateTimer();
   $("submit-state").textContent = "正在提交 · 请勿关闭页面";
   try {
     const receipt = await api(`/api/rounds/${currentRound.id}/submit`, {
@@ -190,12 +196,15 @@ async function submitRound() {
       body: { answers: pendingAnswers, requestKey: pendingKey }
     });
     $("submit-state").textContent = `提交成功 · 第 ${receipt.revision} 次交卷`;
-    $("submit-button").disabled = false;
+    pendingKey = null;
+    pendingAnswers = null;
     notice("");
   } catch (error) {
     $("submit-state").textContent = "尚未确认提交 · 可重试";
-    $("submit-button").disabled = false;
     notice(error.message);
+  } finally {
+    submitInFlight = false;
+    updateTimer();
   }
 }
 

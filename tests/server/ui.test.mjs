@@ -15,6 +15,8 @@ test("the player page exposes the four-field entry flow at a mobile viewport", a
     assert.match(html, /name="viewport"/);
     assert.match(html, /infinity-ribbon\.webp/);
     assert.ok(!html.includes("地点地点地点"));
+    assert.match(html, /id="register-form"[^>]*method="post"/);
+    assert.match(html, /id="recovery-form"[^>]*method="post"/);
     const image = await fetch(`${url}/brand/infinity-ribbon.webp`);
     assert.equal(image.headers.get("content-type"), "image/webp");
     assert.ok((await image.arrayBuffer()).byteLength > 10_000);
@@ -36,6 +38,9 @@ test("operator and stage pages are separate responsive views without public edit
     assert.match(admin, /name="viewport"/);
     assert.match(admin, /开始第一轮/);
     assert.match(admin, /导入题库/);
+    assert.match(admin, /作废单题/);
+    assert.match(admin, /撤销误录加分/);
+    assert.match(admin, /id="login-form"[^>]*method="post"/);
     assert.match(stage, /infinity-ribbon\.webp/);
     assert.match(stage, /开奖/);
     assert.ok(!stage.includes("导入题库"));

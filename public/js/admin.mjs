@@ -50,7 +50,7 @@ function playerRow(profile, frozen) {
   const meta = el("p", "player-row-meta",
     `${profile.grade} 级 · ${teamNames[profile.team]} · ${profile.id.slice(0, 8)} · ${
       profile.excluded ? "已排除" : profile.qualified ? "待领奖核验" : "未提交正式答卷"
-    }`);
+    }${profile.suspectedDuplicate ? " · 疑似重复，请人工核对" : ""}`);
   const buttons = el("div", "player-row-actions");
   const select = el("button", "action ghost", "选为加分对象");
   select.type = "button";
@@ -98,6 +98,28 @@ function renderPlayers(frozen) {
     `${profile.realName} ${profile.nickname} ${profile.id}`.toLowerCase().includes(query));
   for (const profile of visible) list.append(playerRow(profile, frozen));
   if (!visible.length) list.append(el("p", "help", "没有匹配的玩家"));
+}
+
+function renderBonuses(bonuses, frozen) {
+  const list = $("bonus-list");
+  list.replaceChildren();
+  const active = bonuses.filter((bonus) => bonus.voided_at === null);
+  for (const bonus of active.slice(0, 24)) {
+    const row = el("div", "bonus-item");
+    const player = players.find((person) => person.id === bonus.player_id);
+    row.append(el("span", "", `${player?.nickname ?? bonus.player_id.slice(0, 8)} · +${bonus.points} · ${bonus.reason}`));
+    const button = el("button", "action ghost", "撤销");
+    button.disabled = frozen;
+    button.addEventListener("click", () => {
+      const reason = prompt(`确认撤销 ${player?.realName ?? "该玩家"} 的这条加分？填写依据：`);
+      if (reason) void action(() => api(`/api/admin/bonuses/${bonus.id}/void`, {
+        method: "POST", body: { reason }
+      }), "误录加分已撤销，原记录及原因保留");
+    });
+    row.append(button);
+    list.append(row);
+  }
+  if (!active.length) list.append(el("p", "help", "暂无加分记录"));
 }
 
 function renderPrizes(prizes, draws, pool) {
@@ -164,12 +186,25 @@ function renderAudit(events) {
   }
 }
 
+function renderQuestionCorrection(questions, frozen) {
+  const select = $("void-question-id");
+  const selected = select.value;
+  select.replaceChildren(new Option("请选择需要全员作废的题目", ""));
+  for (const question of questions) {
+    const label = `第 ${question.roundId} 轮 · ${String(question.position).padStart(2, "0")} · ${question.prompt}`;
+    select.add(new Option(label, question.id));
+  }
+  if (questions.some((question) => question.id === selected)) select.value = selected;
+  $("void-question-button").disabled = frozen || questions.length === 0;
+}
+
 async function refresh() {
   if ($("dashboard").hidden) return;
   try {
-    const [state, accounts, questionBank, poolResponse, prizeResponse, drawn, audit] = await Promise.all([
+    const [state, accounts, questionBank, poolResponse, prizeResponse, drawn, audit, bonuses] = await Promise.all([
       api("/api/state"), api("/api/admin/players"), api("/api/admin/questions"),
-      api("/api/pool"), api("/api/prizes"), api("/api/draws"), api("/api/admin/audit")
+      api("/api/pool"), api("/api/prizes"), api("/api/draws"), api("/api/admin/audit"),
+      api("/api/admin/bonuses")
     ]);
     offset = state.serverTime - Date.now();
     players = accounts.players;
@@ -188,8 +223,10 @@ async function refresh() {
     $("freeze-button").disabled = !!snapshot.pool;
     $("prize-form").querySelector("button").disabled = !!snapshot.pool;
     $("import-button").disabled = state.rounds.some((round) => round.status !== "prepared");
+    renderQuestionCorrection(questionBank.questions, !!snapshot.pool);
     renderRounds(state, questionBank.questions, !!snapshot.pool);
     renderPlayers(!!snapshot.pool);
+    renderBonuses(bonuses.bonuses, !!snapshot.pool);
     renderPrizes(snapshot.prizes, snapshot.draws, snapshot.pool);
     renderAudit(audit.events);
   } catch (error) {
@@ -237,6 +274,15 @@ $("import-button").addEventListener("click", () => void action(async () => {
     method: "POST", body: { questions: Array.isArray(input) ? input : input.questions }
   });
 }, "题库已导入，请检查30道题和答案依据"));
+$("void-question-button").addEventListener("click", () => {
+  const id = $("void-question-id").value;
+  if (!id) return message("请先选择要作废的题目", true);
+  const reason = prompt(`确定全员作废题目 ${id} 并重算？填写可公示的依据：`);
+  if (!reason) return;
+  void action(() => api(`/api/admin/questions/${encodeURIComponent(id)}/void`, {
+    method: "POST", body: { reason }
+  }), "题目已作废，该题对全体记 0 分并重算");
+});
 $("player-search").addEventListener("input", () => renderPlayers(!!snapshot?.pool));
 $("bonus-form").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -264,6 +310,19 @@ $("prize-form").addEventListener("submit", (event) => {
 $("freeze-button").addEventListener("click", () => {
   if (!confirm("已经核对全部成绩、重复账号与奖品数量？冻结后不能再修改积分和资格。")) return;
   void action(() => api("/api/admin/pool/freeze", { method: "POST", body: {} }), "小球奖池已冻结，可以开始逐奖抽取");
+});
+$("export-button").addEventListener("click", async () => {
+  try {
+    const data = await api("/api/admin/export");
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `xlab-game-export-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    message("导出已完成；文件含个人资料和答卷，请仅交给核分负责人保管。");
+  } catch (error) { message(error.message, true); }
 });
 async function boot() {
   try {

@@ -29,7 +29,7 @@
           <div class="section-overline"><span>01 / PLAYER ENTRY</span><span>创建玩家档案</span></div>
           <h2 id="register-title">加入这一局<span class="glow-dot">.</span></h2>
           <p class="section-copy">使用真实资料登记，昵称将在大屏上更醒目地展示。注册后即自动登录。</p>
-          <form id="register-form" class="field-grid">
+          <form id="register-form" method="post" action="/api/players" class="field-grid">
             <label class="field"><span>真名 <em>REAL NAME</em></span><input id="real-name" name="realName" autocomplete="name" maxlength="40" placeholder="用于中奖身份核验" required></label>
             <label class="field"><span>昵称 <em>PLAYER NAME</em></span><input id="nickname" name="nickname" maxlength="24" placeholder="大屏上你的名字" required></label>
             <label class="field"><span>年级 <em>GRADE</em></span><select id="grade" name="grade" required><option value="" disabled selected>选择年级</option><option value="2019">2019 级</option><option value="2020">2020 级</option><option value="2021">2021 级</option><option value="2022">2022 级</option><option value="2023">2023 级</option><option value="2024">2024 级</option><option value="2025">2025 级</option></select></label>
@@ -38,7 +38,7 @@
           </form>
           <details class="recovery">
             <summary>换了手机？恢复原来的玩家档案</summary>
-            <form id="recovery-form" class="recovery-form">
+            <form id="recovery-form" method="post" action="/api/players/recover" class="recovery-form">
               <label class="field"><span>现场工作人员提供的恢复码</span><input name="code" autocomplete="off" placeholder="输入一次性恢复码" required></label>
               <button type="submit" class="outline-button">恢复原账号</button>
             </form>

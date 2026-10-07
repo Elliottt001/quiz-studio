@@ -7,6 +7,7 @@ import { submitAnswers, scoreRound } from "../../src/server/answers.mjs";
 import {
   addBonus, voidQuestion, ticketCount, listStandings, markAttendance, excludePlayer, freezePool
 } from "../../src/server/standings.mjs";
+import { voidBonus } from "../../src/server/standings.mjs";
 
 const person = (name) => ({
   realName: name, nickname: name, grade: 2025, team: "software"
@@ -38,6 +39,21 @@ test("bonus caps at 20 and standings only include published quiz scores", () => 
     assert.equal(standings.find((p) => p.id === a).score, 100);
     assert.equal(standings.find((p) => p.id === b).score, 20);
     assert.equal(standings.find((p) => p.id === a).rank, 1);
+  } finally { fixture.close(); }
+});
+
+test("a mistaken bonus can be voided with a reason without deleting its audit record", () => {
+  const fixture = newTestDb();
+  try {
+    const db = fixture.db;
+    const id = registerPlayer(db, person("更正玩家"), 100).playerId;
+    const added = addBonus(db, id, "speaking", 10, "误录分享", "admin", 200);
+    assert.equal(listStandings(db)[0].score, 10);
+    voidBonus(db, added.id, "环节负责人确认未发生", "admin", 210);
+    assert.equal(listStandings(db)[0].score, 0);
+    assert.equal(db.prepare("SELECT reason,voided_at FROM bonus_events WHERE id=?").get(added.id).voided_at, 210);
+    assert.equal(db.prepare("SELECT kind FROM audit_events ORDER BY id DESC LIMIT 1").get().kind, "bonus_voided");
+    assert.throws(() => voidBonus(db, added.id, "重复撤销", "admin", 220), /已撤销/);
   } finally { fixture.close(); }
 });
 
@@ -79,6 +95,22 @@ test("all-invalid quiz gives each qualified person one equal ball", () => {
     addPrize(fixture.db);
     const frozen = freezePool(fixture.db, "admin", 300);
     assert.deepEqual(frozen.entries.map((p) => p.balls), [1, 1]);
+  } finally { fixture.close(); }
+});
+
+test("all-invalid rounds allow freely registered players without advance check-in", () => {
+  const fixture = newTestDb();
+  try {
+    const db = fixture.db;
+    const a = registerPlayer(db, person("甲"), 100).playerId;
+    const b = registerPlayer(db, person("乙"), 100).playerId;
+    const excluded = registerPlayer(db, person("审题人"), 100).playerId;
+    db.prepare("UPDATE rounds SET status='voided'").run();
+    excludePlayer(db, excluded, "审题人员", "admin", 200);
+    addPrize(db);
+    const frozen = freezePool(db, "admin", 300);
+    assert.deepEqual(frozen.entries.map((entry) => entry.playerId).sort(), [a, b].sort());
+    assert.deepEqual(frozen.entries.map((entry) => entry.balls), [1, 1]);
   } finally { fixture.close(); }
 });
 

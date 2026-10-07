@@ -55,3 +55,49 @@ test("the build copies local assets without changing the source", () => {
   assert.equal(readFileSync(join(output, "index.html"), "utf8"), "<main>X-Lab</main>");
   assert.equal(readFileSync(join(source, "index.html"), "utf8"), "<main>X-Lab</main>");
 });
+
+test("a packaged server serves its selected built asset directory, not an implicit source copy", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "xlab-built-"));
+  directories.push(directory);
+  const built = join(directory, "dist");
+  mkdirSync(built);
+  writeFileSync(join(built, "index.html"), "<main>BUILT-ASSET</main>");
+  const db = openDb(join(directory, "game.sqlite"));
+  const app = buildApp(db, () => 100, { staticDir: built });
+  const address = await app.listen(0, "127.0.0.1");
+  try {
+    assert.match(await (await fetch(address)).text(), /BUILT-ASSET/);
+  } finally {
+    await app.close();
+    db.close();
+  }
+});
+
+test("packaged startup refuses a missing build rather than exposing a broken signup link", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "xlab-unbuilt-"));
+  directories.push(directory);
+  const db = openDb(join(directory, "game.sqlite"));
+  const app = buildApp(db, () => 100, { staticDir: join(directory, "dist") });
+  try {
+    await assert.rejects(() => app.listen(0, "127.0.0.1"), /npm run build/);
+  } finally {
+    await app.close().catch(() => {});
+    db.close();
+  }
+});
+
+test("a malformed encoded path returns a client error without terminating the service", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "xlab-path-"));
+  directories.push(directory);
+  const db = openDb(join(directory, "game.sqlite"));
+  const app = buildApp(db);
+  const address = await app.listen(0, "127.0.0.1");
+  try {
+    const malformed = await fetch(`${address}/%ZZ`);
+    assert.equal(malformed.status, 400);
+    assert.equal((await fetch(`${address}/api/health`)).status, 200);
+  } finally {
+    await app.close();
+    db.close();
+  }
+});
