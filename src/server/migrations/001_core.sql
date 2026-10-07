@@ -70,6 +70,12 @@ CREATE TABLE IF NOT EXISTS round_scores (
   answers_json TEXT NOT NULL,
   PRIMARY KEY(player_id, round_id)
 );
+CREATE TABLE IF NOT EXISTS voided_questions (
+  question_id TEXT PRIMARY KEY REFERENCES questions(id),
+  reason TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS bonus_events (
   id TEXT PRIMARY KEY,
   player_id TEXT NOT NULL REFERENCES players(id),

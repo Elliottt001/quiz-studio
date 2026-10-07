@@ -69,7 +69,9 @@ export function submitAnswers(db, playerId, roundId, answers, requestKey, now) {
 }
 
 export function scoreRound(db, roundId) {
-  const questions = db.prepare("SELECT id,kind,correct_option FROM questions WHERE round_id=?").all(roundId);
+  const questions = db.prepare(`SELECT q.id,q.kind,q.correct_option,
+    v.question_id AS voided FROM questions q
+    LEFT JOIN voided_questions v ON v.question_id=q.id WHERE q.round_id=?`).all(roundId);
   const submissions = db.prepare(`SELECT player_id,answers_json FROM submissions
     WHERE round_id=? ORDER BY player_id,revision DESC`).all(roundId);
   const seen = new Set();
@@ -83,7 +85,7 @@ export function scoreRound(db, roundId) {
     const detail = {};
     for (const question of questions) {
       const answer = answers[question.id];
-      detail[question.id] = question.kind === "reflection"
+      detail[question.id] = question.voided ? 0 : question.kind === "reflection"
         ? reflectionPoints(answer)
         : answer === question.correct_option ? 10 : 0;
     }
