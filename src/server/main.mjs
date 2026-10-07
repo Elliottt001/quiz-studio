@@ -1,17 +1,17 @@
-import { chmodSync, mkdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { openDb } from "./db.mjs";
 import { buildApp } from "./app.mjs";
 import { settleDueRounds } from "./rounds.mjs";
 import { scoreRound } from "./answers.mjs";
 import { backupDatabase } from "./backup.mjs";
+import { resolveStorage } from "./config.mjs";
 
-mkdirSync("data", { recursive: true, mode: 0o700 });
-chmodSync("data", 0o700);
-const db = openDb(join("data", "game.sqlite"));
+const storage = resolveStorage(process.env);
+const db = openDb(storage.game);
 let backupQueue = Promise.resolve();
 function saveSnapshot() {
-  backupQueue = backupQueue.catch(() => {}).then(() => backupDatabase(db, join("data", "backup-latest.sqlite")));
+  backupQueue = backupQueue.catch(() => {}).then(() => backupDatabase(db, storage.backup));
   return backupQueue;
 }
 if (settleDueRounds(db, Date.now(), scoreRound).length) await saveSnapshot();
@@ -22,7 +22,10 @@ const tls = process.env.TLS_CERT_PATH && process.env.TLS_KEY_PATH
 const app = buildApp(db, Date.now, {
   adminPasswordHash: process.env.ADMIN_PASSWORD_HASH,
   tls,
-  secureCookies: !!tls,
+  publicOrigin: process.env.PUBLIC_ORIGIN,
+  previewOrigin: process.env.PREVIEW_ORIGIN,
+  tlsTerminated: process.env.TRUSTED_HTTPS_PROXY === "1",
+  secureCookies: !!tls || process.env.TRUSTED_HTTPS_PROXY === "1",
   onCriticalChange: saveSnapshot,
   staticDir: resolve("dist")
 });

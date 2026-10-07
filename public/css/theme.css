@@ -33,6 +33,13 @@ body {
   color: #91b6dd; font: 700 11px "DIN Alternate", "Avenir Next", sans-serif;
   letter-spacing: .16em; white-space: nowrap;
 }
+.entry-links { display: flex; align-items: center; gap: 10px; }
+.entry-links a, .entry-links button {
+  color: #c8e8f6; background: transparent; text-decoration: none;
+  border: 1px solid rgba(139,209,239,.32); border-radius: 9px; min-height: 44px;
+  display: inline-flex; align-items: center; padding: 8px 12px; font-size: 12px; white-space: nowrap;
+}
+.entry-links a:hover, .entry-links button:hover { color: #fff; border-color: #80e8f4; }
 .site-footer {
   width: min(1460px, calc(100% - 64px)); margin: auto; display: flex;
   justify-content: space-between; gap: 15px; padding-bottom: 23px;
@@ -45,4 +52,13 @@ button { cursor: pointer; font: inherit; }
   .lab-mark img { width: 205px; }
   .header-edition { display: none; }
   .site-footer { width: calc(100% - 26px); }
+}
+@media (max-width: 520px) {
+  .site-header { flex-wrap: wrap; }
+  .lab-mark img { width: 155px; max-width: 40vw; }
+  .entry-links { gap: 5px; margin-left: auto; }
+  .entry-links a, .entry-links button { font-size: 10px; padding: 7px; }
+}
+@media (max-width: 360px) {
+  .entry-links { width: 100%; justify-content: flex-end; }
 }

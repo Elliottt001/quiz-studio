@@ -1,6 +1,7 @@
 @import url("/css/theme.css");
 .admin-nav { display:flex;gap:24px;font-size:13px; }
 .admin-nav a { color:#aedff2;text-decoration:none;min-height:44px;display:inline-flex;align-items:center; }
+.admin-nav button { color:#aedff2;background:none;border:0;min-height:44px;font-size:13px; }
 .admin-nav a:hover { color:#fff; }
 .admin-shell { width:min(1460px,calc(100% - 64px));margin:32px auto 62px; }
 .admin-intro { position:relative;overflow:hidden;border-radius:24px;border:1px solid rgba(135,200,250,.22);padding:42px 48px;background:linear-gradient(105deg,#111c4c 15%,rgba(15,38,88,.88)),url("/brand/infinity-ribbon.webp") right center/auto 135% no-repeat; }

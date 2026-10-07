@@ -33,7 +33,8 @@ export async function runLoadTest({ clients = 300, submitters = 200 } = {}) {
   try {
     const issued = await Promise.all(Array.from({ length: clients }, (_, n) => post("/api/players", {
       realName: `压测用户${n}`, nickname: `LOAD${n}`, grade: 2025,
-      team: ["software", "hardware", "operations", "design"][n % 4]
+      team: ["software", "hardware", "operations", "design"][n % 4],
+      password: `load-test-password-${n}`
     })));
     const registered = issued.filter((entry) => entry.status === 201).length;
     if (registered !== clients) throw new Error(`Only ${registered}/${clients} registered`);

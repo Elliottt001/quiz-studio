@@ -23,14 +23,28 @@ const contentTypes = {
 
 export function buildApp(db, clock = Date.now, options = {}) {
   const publicDir = resolve(options.staticDir ?? defaultPublicDir);
+  const publicOrigin = options.publicOrigin ? new URL(options.publicOrigin).origin : null;
+  const previewOrigin = options.previewOrigin ? new URL(options.previewOrigin).origin : null;
+  if (publicOrigin && !publicOrigin.startsWith("https://")) {
+    throw new Error("公网域名必须使用 HTTPS");
+  }
+  if (previewOrigin && (!publicOrigin || !previewOrigin.startsWith("https://"))) {
+    throw new Error("预览域名必须与公网域名一起使用 HTTPS");
+  }
   const routes = [];
   const tickers = [];
   let interval;
   const handler = async (req, res) => {
     const url = new URL(req.url, "http://localhost");
     if (req.method === "GET" && url.pathname === "/api/health") {
-      res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: true }));
+      try {
+        db.prepare("SELECT 1 AS ready").get();
+        res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: true }));
+      } catch {
+        res.writeHead(503, { "content-type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: false }));
+      }
       return;
     }
     for (const route of routes) {
@@ -47,7 +61,11 @@ export function buildApp(db, clock = Date.now, options = {}) {
           let sameHost = false;
           try {
             const origin = new URL(req.headers.origin);
-            sameHost = origin.host === req.headers.host && origin.protocol === (options.tls ? "https:" : "http:");
+            const expectedProtocol = options.tls || options.tlsTerminated ? "https:" : "http:";
+            sameHost = origin.protocol === expectedProtocol
+              && (publicOrigin
+                ? origin.origin === publicOrigin || origin.origin === previewOrigin
+                : origin.host === req.headers.host);
           } catch {}
           if (!sameHost) {
             res.writeHead(403, { "content-type": "application/json; charset=utf-8" });
@@ -121,7 +139,8 @@ export function buildApp(db, clock = Date.now, options = {}) {
         return Promise.reject(new Error("缺少网页构建产物，请先运行 npm run build"));
       }
       if (!["127.0.0.1", "::1", "localhost"].includes(host)
-        && (!options.tls?.cert || !options.tls?.key || !options.adminPasswordHash)) {
+        && (!(options.tls?.cert && options.tls?.key) && !(options.tlsTerminated && publicOrigin)
+          || !options.adminPasswordHash)) {
         return Promise.reject(new Error("局域网运行需要受信任的 HTTPS/TLS 证书与管理员口令"));
       }
       return new Promise((resolve, reject) => {

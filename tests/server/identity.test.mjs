@@ -44,7 +44,7 @@ test("registration sets an opaque cookie and player credentials cannot operate a
     const registered = await fetch(`${url}/api/players`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-xlab-action": "1" },
-      body: JSON.stringify(identity)
+      body: JSON.stringify({ ...identity, password: "valid-player-password" })
     });
     assert.equal(registered.status, 201);
     const cookie = registered.headers.get("set-cookie");
@@ -75,7 +75,7 @@ test("admin login is separate and recovery moves an existing account to a new de
     body: JSON.stringify(body)
   });
   try {
-    const player = await post("/api/players", identity);
+    const player = await post("/api/players", { ...identity, password: "valid-player-password" });
     const { id } = await player.json();
     const oldCookie = player.headers.get("set-cookie");
     assert.equal((await post("/api/admin/login", { password: "wrong" })).status, 401);
@@ -85,12 +85,16 @@ test("admin login is separate and recovery moves an existing account to a new de
     const recovery = await post(`/api/admin/players/${id}/recover`, {}, adminCookie);
     assert.equal(recovery.status, 200);
     const { code } = await recovery.json();
-    const redeemed = await post("/api/players/recover", { code });
+    const redeemed = await post("/api/players/recover", {
+      code, password: "new-player-password"
+    });
     assert.equal(redeemed.status, 200);
     const newCookie = redeemed.headers.get("set-cookie");
     assert.equal((await fetch(`${url}/api/me`, { headers: { cookie: oldCookie } })).status, 401);
     assert.equal((await fetch(`${url}/api/me`, { headers: { cookie: newCookie } })).status, 200);
-    assert.equal((await post("/api/players/recover", { code })).status, 409);
+    assert.equal((await post("/api/players/recover", {
+      code, password: "new-player-password"
+    })).status, 409);
   } finally {
     await app.close();
     fixture.close();
@@ -119,7 +123,7 @@ test("a state change from a foreign origin is rejected even with the action head
   }
 });
 
-test("repeated wrong administrator passwords are temporarily rate limited", async () => {
+test("failed administrator attempts cannot lock the operator out behind a shared proxy", async () => {
   const fixture = newTestDb();
   let now = 1_000;
   const app = buildApp(fixture.db, () => now, {
@@ -133,8 +137,6 @@ test("repeated wrong administrator passwords are temporarily rate limited", asyn
   });
   try {
     for (let i = 0; i < 5; i++) assert.equal((await login("wrong")).status, 401);
-    assert.equal((await login("correct-admin-secret")).status, 429);
-    now += 60_001;
     assert.equal((await login("correct-admin-secret")).status, 200);
   } finally {
     await app.close();
