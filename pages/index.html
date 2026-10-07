@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1538">
+  <meta name="description" content="2026 X-Lab 年度大会「无限游戏」现场答题指引。请连接会场校网，使用现场公布的答题入口。">
+  <title>无限游戏 · X-Lab 年度大会</title>
+  <style>
+    :root { color-scheme:dark; font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+      --navy:#0b1538; --cyan:#73e7f2; --muted:#acc8e4; }
+    * { box-sizing:border-box; }
+    html { min-width:320px; background:var(--navy); }
+    body { margin:0; min-height:100vh; color:#f7fbff; overflow-x:hidden;
+      background:radial-gradient(circle at 80% -20%,#1e3f83 0,transparent 40%),
+        linear-gradient(135deg,#0a1031,#0c2050 70%,#122658); }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.3;
+      background-image:radial-gradient(circle,rgba(170,226,255,.55) 1px,transparent 2px);
+      background-size:32px 32px;
+      mask-image:radial-gradient(circle at 96% 6%,#000,transparent 30%),
+        radial-gradient(circle at 0 100%,#000,transparent 30%); }
+    .shell { width:min(1380px,calc(100% - 64px)); margin:0 auto; padding:25px 0 32px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:22px; }
+    header img { width:280px; max-width:58vw; height:auto; mix-blend-mode:screen; }
+    header span,.eyebrow,.label,footer { font-family:"DIN Alternate","Avenir Next",sans-serif;
+      font-weight:700; letter-spacing:.17em; }
+    header span { color:#a3c8e7; font-size:12px; white-space:nowrap; }
+    main { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr); gap:18px;
+      margin:30px 0 25px; min-height:min(740px,calc(100vh - 175px)); }
+    .hero,.guide { border:1px solid rgba(170,222,255,.2); border-radius:23px; overflow:hidden; }
+    .hero { position:relative; isolation:isolate; display:flex; flex-direction:column;
+      justify-content:flex-start; padding:clamp(36px,5vw,82px);
+      background:linear-gradient(145deg,#101b48,#0d245c 70%,#0a1b49); }
+    .hero::before { content:""; position:absolute; z-index:-1; inset:0;
+      background:linear-gradient(transparent 28%,rgba(7,21,56,.12) 52%,rgba(7,21,56,.1)); }
+    .hero img { position:absolute; z-index:-2; width:145%; max-width:none; left:-18%; bottom:-7%;
+      mask-image:linear-gradient(transparent,#000 24%,#000); filter:saturate(1.2);
+      pointer-events:none; }
+    .eyebrow { color:#bfefff; font-size:clamp(12px,1.3vw,18px); }
+    .eyebrow::before { content:""; display:inline-block; width:26px; height:2px;
+      margin:0 12px 4px 0; background:var(--cyan); box-shadow:0 0 18px var(--cyan); }
+    h1 { margin:28px 0 10px; font-size:clamp(70px,8vw,138px); line-height:1.06;
+      letter-spacing:-.07em; white-space:nowrap; text-shadow:0 8px 25px rgba(0,0,0,.25); }
+    .subtitle { font-size:clamp(15px,1.8vw,24px); letter-spacing:.15em; color:#d7ecff; }
+    .hero-bottom { margin-top:auto; font-size:12px; letter-spacing:.2em;
+      color:#cce5fa; text-shadow:0 3px 9px #0b1538; }
+    .guide { padding:clamp(28px,3vw,50px); background:linear-gradient(155deg,rgba(23,44,95,.96),
+      rgba(11,28,70,.98)); }
+    .label { color:#73e6f4; font-size:11px; }
+    h2 { font-size:clamp(32px,3vw,48px); line-height:1.22; letter-spacing:-.04em;
+      margin:28px 0 16px; }
+    .guide p { color:#c5d9ed; font-size:15px; line-height:1.8; }
+    .status { border:1px solid rgba(119,226,248,.45); background:rgba(30,91,139,.24);
+      border-radius:13px; padding:16px 18px; color:#d8faff; line-height:1.65;
+      font-size:14px; margin:24px 0; }
+    ol { list-style:none; margin:26px 0 0; padding:0; display:grid; gap:12px; }
+    li { display:flex; gap:16px; align-items:flex-start; padding:15px;
+      border:1px solid rgba(151,209,247,.17); border-radius:12px; background:rgba(9,29,69,.53); }
+    li strong { color:var(--cyan); font-size:21px; line-height:1; }
+    li span { color:#d8eaf7; font-size:14px; line-height:1.6; }
+    .footnote { color:#9ebbd9!important; font-size:12px!important; margin:29px 0 0; }
+    footer { display:flex; justify-content:space-between; gap:15px; color:#9dbad6; font-size:11px; }
+    @media(max-width:900px) {
+      .shell { width:min(680px,calc(100% - 24px)); padding-top:12px; }
+      header img { width:210px; } header span { display:none; }
+      main { display:block; margin:15px 0; }
+      .hero { min-height:270px; border-radius:18px 18px 8px 8px; padding:26px; }
+      .hero img { width:120%; left:26%; bottom:-70%; opacity:.83; }
+      h1 { font-size:clamp(54px,10vw,85px); margin:15px 0 0; }
+      .subtitle { font-size:13px; margin-top:8px; }
+      .hero-bottom { display:none; }
+      .guide { margin-top:9px; border-radius:8px 8px 18px 18px; padding:25px; }
+    }
+    @media(max-width:390px) {
+      .hero { min-height:220px; padding:21px; }
+      h1 { font-size:51px; }
+      .guide { padding:22px 18px; }
+      h2 { font-size:32px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <img src="./brand/xlab-mark.webp" alt="浙江大学启真交叉学科创新创业实验室">
+      <span>2026 · X-LAB ANNUAL GAME</span>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="title">
+        <div class="eyebrow">PLAY THE INFINITE / 2026</div>
+        <h1 id="title">无限游戏</h1>
+        <p class="subtitle">胜负有尽，创造无疆。</p>
+        <p class="hero-bottom">X-LAB · SIDE QUEST 01—04</p>
+        <img src="./brand/infinity-ribbon.webp" alt="" aria-hidden="true">
+      </section>
+      <section class="guide" aria-labelledby="guide-title">
+        <div class="label">EVENT ACCESS / 现场指引</div>
+        <h2 id="guide-title">游戏在现场开启<span style="color:#75e8f4">.</span></h2>
+        <p>四轮答题贯穿分享。听见故事、认识团队、发现可能，然后写下属于你的训练营感受。</p>
+        <div class="status">本站是公开说明页，不能在此注册或答题。正式游戏由会场专用电脑运行，不通过 GitHub Pages 保存答案、积分或抽奖数据。</div>
+        <ol>
+          <li><strong>01</strong><span>到场后连接会场校网。</span></li>
+          <li><strong>02</strong><span>从参会微信群或现场二维码获取正式答题入口。</span></li>
+          <li><strong>03</strong><span>按主持人提示进入四轮游戏，每轮由管理员开启后计时五分钟。</span></li>
+        </ol>
+        <p class="footnote">公开域名：x-lab.game.elliotttzhang.cn · 现场地址以大会工作人员最终通知为准。</p>
+      </section>
+    </main>
+    <footer><span>∞ PLAY THE INFINITE</span><span>局无终点，我们继续 PLAY</span></footer>
+  </div>
+</body>
+</html>

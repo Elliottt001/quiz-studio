@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node --test tests/**/*.test.mjs",
     "build": "node scripts/build.mjs",
+    "build:pages": "node scripts/build-pages.mjs",
     "start": "node --env-file-if-exists=.env.local src/server/main.mjs",
     "dev": "node --env-file-if-exists=.env.local --watch src/server/main.mjs",
     "check": "node --check src/server/main.mjs && node --check public/js/player.mjs && node --check public/js/admin.mjs && node --check public/js/display.mjs"

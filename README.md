@@ -69,3 +69,7 @@ npm start
 ## 部署和应急
 
 完整的[现场操作手册](/Users/bytedance/Projects/xlab-annual-quiz/docs/runbook.md)列出校网、证书、管理员、题库、主备电脑、联排、备份和故障处置步骤。**非本机地址必须配置 TLS 证书和管理员口令，否则服务器拒绝监听。** 先在实际会场设备与校网中测试微信内打开、200 人最后几秒集中交卷、投屏切换与备用电脑恢复，再发布入口。
+
+### GitHub Pages 公开说明页
+
+`npm run build:pages` 只打包 `pages/index.html` 与两张视觉图到 `dist-pages/`；推送 `main` 后 `.github/workflows/pages.yml` 自动发布这个**公开说明页**。它不承载正式答题，也不连接本地 API。域名 `x-lab.game.elliotttzhang.cn` 的火山引擎公网 CNAME、GitHub Pages 设置与校网内 DNS 分流详见 [GitHub Pages 与 DNS 配置](/Users/bytedance/Projects/xlab-annual-quiz/docs/github-pages-dns.md)。
