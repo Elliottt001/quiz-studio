@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { registerIdentityRoutes } from "./routes/identity.mjs";
 
 const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../public");
 const contentTypes = {
@@ -13,7 +14,7 @@ const contentTypes = {
   ".svg": "image/svg+xml"
 };
 
-export function buildApp(db, clock = Date.now) {
+export function buildApp(db, clock = Date.now, options = {}) {
   const routes = [];
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
@@ -26,6 +27,21 @@ export function buildApp(db, clock = Date.now) {
       const match = req.method === route.method && url.pathname.match(route.pattern);
       if (!match) continue;
       try {
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)
+          && req.headers["x-xlab-action"] !== "1") {
+          res.writeHead(403, { "content-type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "请求来源不受信任" }));
+          return;
+        }
+        if (req.headers.origin) {
+          let sameHost = false;
+          try { sameHost = new URL(req.headers.origin).host === req.headers.host; } catch {}
+          if (!sameHost) {
+            res.writeHead(403, { "content-type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ error: "请求来源不受信任" }));
+            return;
+          }
+        }
         const chunks = [];
         for await (const chunk of req) {
           chunks.push(chunk);
@@ -73,7 +89,7 @@ export function buildApp(db, clock = Date.now) {
     res.writeHead(404, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify({ error: "not found" }));
   });
-  return {
+  const app = {
     route(method, pattern, handler) { routes.push({ method, pattern, handler }); },
     listen(port, host = "127.0.0.1") {
       return new Promise((resolve, reject) => {
@@ -87,4 +103,6 @@ export function buildApp(db, clock = Date.now) {
     },
     close() { return new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())); }
   };
+  registerIdentityRoutes(app, options);
+  return app;
 }

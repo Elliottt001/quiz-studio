@@ -17,6 +17,12 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS recovery_codes (
+  token_hash TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  expires_at INTEGER NOT NULL,
+  used_at INTEGER
+);
 CREATE TABLE IF NOT EXISTS rounds (
   id INTEGER PRIMARY KEY CHECK (id BETWEEN 1 AND 4),
   title TEXT NOT NULL,
