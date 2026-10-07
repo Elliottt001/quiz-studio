@@ -1,12 +1,26 @@
+import { statSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { openDb } from "../src/server/db.mjs";
+import { DatabaseSync } from "node:sqlite";
 
 export function inspectBackup(path) {
-  const db = openDb(path);
+  let details;
   try {
+    details = statSync(path);
+  } catch {
+    throw new Error("备份文件不存在");
+  }
+  if (!details.isFile() || details.size < 100) throw new Error("备份文件无效或损坏");
+  const db = new DatabaseSync(path, { readOnly: true });
+  try {
+    if (db.prepare("PRAGMA integrity_check").get().integrity_check !== "ok") {
+      throw new Error("备份文件损坏");
+    }
+    if (db.prepare("SELECT COUNT(*) AS n FROM rounds").get().n !== 4) {
+      throw new Error("备份文件无效：缺少四轮数据");
+    }
     return {
-      integrity: db.prepare("PRAGMA integrity_check").get().integrity_check,
+      integrity: "ok",
       players: db.prepare("SELECT COUNT(*) AS n FROM players").get().n,
       submissions: db.prepare("SELECT COUNT(*) AS n FROM submissions").get().n,
       scores: db.prepare("SELECT COUNT(*) AS n FROM round_scores").get().n,

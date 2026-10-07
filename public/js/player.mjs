@@ -1,5 +1,6 @@
 import { api, remainingLabel, teamNames } from "./api.mjs";
-import { submitButtonState } from "./submit-state.mjs";
+import { restoredAnswers, submitButtonState } from "./submit-state.mjs";
+import { shortPlayerId } from "./public-identity.mjs";
 
 const $ = (id) => document.getElementById(id);
 const views = ["register", "lobby", "quiz", "results"];
@@ -37,7 +38,7 @@ function setPlayer(profile) {
   player = profile;
   $("lobby-title").textContent = profile.nickname;
   $("real-name-label").textContent = profile.realName;
-  $("player-id-label").textContent = `ID ${profile.id.slice(0, 8).toUpperCase()}`;
+  $("player-id-label").textContent = `ID ${shortPlayerId(profile.id)}`;
   $("grade-label").textContent = `${profile.grade} 级`;
   $("team-label").textContent = teamNames[profile.team] ?? profile.team;
   view("lobby");
@@ -169,12 +170,15 @@ async function openRound(id) {
     if (data.round.status !== "open") return;
     currentRound = data.round;
     currentQuestions = data.questions;
-    answers = { ...(mine.draft?.answers ?? {}) };
+    const restored = restoredAnswers(mine.draft, mine.submission);
+    answers = restored.answers;
     pendingKey = null;
     showingResultsFor = null;
     $("quiz-kicker").textContent = `SIDE QUEST 0${id} / 04`;
     $("quiz-title").textContent = data.round.title;
-    $("submit-state").textContent = mine.submission ? `提交成功 · 第 ${mine.submission.revision} 次交卷` : "尚未提交";
+    $("submit-state").textContent = restored.hasUnsubmittedChanges
+      ? `第 ${mine.submission.revision} 次交卷已成功 · 当前修改尚未提交`
+      : mine.submission ? `提交成功 · 第 ${mine.submission.revision} 次交卷` : "尚未提交";
     $("submit-button").disabled = false;
     drawQuestions(data.questions);
     view("quiz");
@@ -219,7 +223,7 @@ function renderLeaderboard() {
     const row = element("li", entry.id === player?.id ? "is-me" : "");
     row.append(element("span", "rank", String(entry.rank).padStart(2, "0")));
     const name = element("span", "board-name", entry.nickname);
-    name.append(element("small", "", entry.realName));
+    name.append(element("small", "", `${entry.realName} · #${shortPlayerId(entry.id)}`));
     row.append(name, element("strong", "board-score", String(entry.score)));
     list.append(row);
   }

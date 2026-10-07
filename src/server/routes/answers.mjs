@@ -23,14 +23,18 @@ export function registerAnswerRoutes(app, scorer) {
     settleDueRounds(ctx.db, ctx.clock(), scorer);
     const draft = ctx.db.prepare("SELECT answers_json,saved_at FROM drafts WHERE player_id=? AND round_id=?")
       .get(playerId, id);
-    const submission = ctx.db.prepare(`SELECT id,revision,submitted_at FROM submissions
+    const submission = ctx.db.prepare(`SELECT id,revision,submitted_at,answers_json FROM submissions
       WHERE player_id=? AND round_id=? ORDER BY revision DESC LIMIT 1`).get(playerId, id);
     const score = ctx.db.prepare("SELECT points,answers_json FROM round_scores WHERE player_id=? AND round_id=?")
       .get(playerId, id);
     const published = getRoundState(ctx.db, id).status === "published";
     return { body: {
       draft: draft ? { answers: JSON.parse(draft.answers_json), savedAt: draft.saved_at } : null,
-      submission: submission ? { id: submission.id, revision: submission.revision, submittedAt: submission.submitted_at } : null,
+      submission: submission ? {
+        id: submission.id, revision: submission.revision,
+        submittedAt: submission.submitted_at,
+        answers: JSON.parse(submission.answers_json)
+      } : null,
       score: published && score ? { points: score.points, detail: JSON.parse(score.answers_json) } : null
     } };
   });

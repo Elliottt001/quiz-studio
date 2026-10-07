@@ -7,3 +7,13 @@ export function submitButtonState(remainingMs, pendingKey, inFlight) {
   }
   return { disabled: false, label: pendingKey ? "重试确认交卷" : "提交本轮答卷 ↗" };
 }
+
+export function restoredAnswers(draft, submission) {
+  if (draft && (!submission || draft.savedAt > submission.submittedAt)) {
+    return { answers: { ...draft.answers }, hasUnsubmittedChanges: !!submission };
+  }
+  return {
+    answers: { ...(submission?.answers ?? {}) },
+    hasUnsubmittedChanges: false
+  };
+}

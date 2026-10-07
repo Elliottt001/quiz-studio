@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { openDb } from "../../src/server/db.mjs";
@@ -23,6 +23,20 @@ test("backup inspector reports persisted counts and integrity without mutating t
     });
   } finally {
     source.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("backup inspection rejects missing or truncated snapshots without creating a database", () => {
+  const directory = mkdtempSync(join(tmpdir(), "xlab-inspect-invalid-"));
+  try {
+    const missing = join(directory, "missing.sqlite");
+    assert.throws(() => inspectBackup(missing), /不存在|无效/);
+    assert.equal(existsSync(missing), false);
+    const truncated = join(directory, "truncated.sqlite");
+    writeFileSync(truncated, Buffer.from("SQLite format 3\0"));
+    assert.throws(() => inspectBackup(truncated), /无效|损坏|database|disk/);
+  } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 });

@@ -4,6 +4,7 @@ import { newTestDb, makeQuestionBank } from "./helpers.mjs";
 import { registerPlayer } from "../../src/server/auth.mjs";
 import { importQuestionBank, startRound, settleDueRounds } from "../../src/server/rounds.mjs";
 import { saveDraft, submitAnswers, reflectionPoints, scoreRound } from "../../src/server/answers.mjs";
+import { buildApp } from "../../src/server/app.mjs";
 
 function readyRound(db, id = 1) {
   importQuestionBank(db, makeQuestionBank(), "admin", 100);
@@ -75,4 +76,32 @@ test("round four awards reflection points without publishing its answer", () => 
       10
     );
   } finally { fixture.close(); }
+});
+
+test("after refresh, latest confirmed answers are returned even when an older draft exists", async () => {
+  const fixture = newTestDb();
+  let now = 2_000_100;
+  const { db } = fixture;
+  readyRound(db);
+  const player = registerPlayer(db, {
+    realName: "刷新玩家", nickname: "REFRESH", grade: 2025, team: "software"
+  }, 100);
+  saveDraft(db, player.playerId, 1, { q1: 1 }, now);
+  now += 10;
+  submitAnswers(db, player.playerId, 1, { q1: 0 }, "accepted", now);
+  const app = buildApp(db, () => now);
+  const url = await app.listen(0, "127.0.0.1");
+  try {
+    const mine = await fetch(`${url}/api/rounds/1/my`, {
+      headers: { cookie: `player_session=${player.sessionToken}` }
+    });
+    assert.equal(mine.status, 200);
+    const state = await mine.json();
+    assert.deepEqual(state.draft.answers, { q1: 1 });
+    assert.deepEqual(state.submission.answers, { q1: 0 });
+    assert.equal(state.submission.submittedAt, now);
+  } finally {
+    await app.close();
+    fixture.close();
+  }
 });

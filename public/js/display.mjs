@@ -1,4 +1,5 @@
 import { api, remainingLabel } from "./api.mjs";
+import { displayedBallId, shortPlayerId } from "./public-identity.mjs";
 
 const $ = (id) => document.getElementById(id);
 let offset = 0;
@@ -14,7 +15,7 @@ function stageBoard(players) {
     const name = document.createElement("strong");
     name.textContent = entry.nickname;
     const detail = document.createElement("small");
-    detail.textContent = entry.realName;
+    detail.textContent = `${entry.realName} · #${shortPlayerId(entry.id)}`;
     const score = document.createElement("em");
     score.textContent = `${entry.score} PTS`;
     card.append(name, detail, score);
@@ -53,8 +54,8 @@ async function update() {
       } 颗初始小球 · 每颗球机会相同`;
       $("winner-prize").textContent = prize?.title ?? latest.prizeId;
       $("winner-nickname").textContent = person?.nickname ?? latest.playerId.slice(0, 8);
-      $("winner-realname").textContent = person?.realName ?? "";
-      $("winner-ball").textContent = `抽中球号 ${latest.selectedBallId.split(":").at(-1)} · 抽取前 ${latest.totalBallsBefore} 颗球`;
+      $("winner-realname").textContent = `${person?.realName ?? ""} · #${shortPlayerId(latest.playerId)}`;
+      $("winner-ball").textContent = `抽中球号 ${displayedBallId(latest.selectedBallId)} · 抽取前 ${latest.totalBallsBefore} 颗球`;
       $("stage-status").textContent = latest.status === "refused" ? "此奖已放弃 · 等待公开补抽" : "中奖者请上台核验身份";
       if (lastDraw !== latest.id) {
         $("stage-winner").animate?.([
