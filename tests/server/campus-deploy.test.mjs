@@ -4,6 +4,8 @@ import { validateCampusProxy } from "../../src/server/config.mjs";
 import { probeGame } from "../../scripts/verify-campus.mjs";
 import { newTestDb } from "./helpers.mjs";
 import { buildApp } from "../../src/server/app.mjs";
+import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
 
 const campus = {
   CAMPUS_PROXY_ONLY: "1",
@@ -16,6 +18,9 @@ const campus = {
 
 test("campus mode refuses an exposed plaintext listener and incomplete TLS proxy settings", () => {
   assert.doesNotThrow(() => validateCampusProxy(campus));
+  assert.doesNotThrow(() => validateCampusProxy({
+    ...campus, PUBLIC_ORIGIN: "https://quiz.campus.example.edu.cn"
+  }));
   for (const changes of [
     { HOST: "0.0.0.0" },
     { HOST: "::1" },
@@ -52,4 +57,12 @@ test("campus probe rejects the old Pages introduction without a working API", as
       })),
     /健康检查|完整游戏/
   );
+});
+
+test("campus verification requires an explicit game domain instead of assuming Pages", () => {
+  const run = spawnSync(process.execPath, [resolve("scripts/verify-campus.mjs")], {
+    env: { PATH: process.env.PATH }, encoding: "utf8"
+  });
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /请指定.*域名/);
 });

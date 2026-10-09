@@ -29,9 +29,11 @@ export async function probeGame(origin, request = fetch) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const origin = process.argv[2] ?? process.env.PUBLIC_ORIGIN
-    ?? "https://x-lab.game.elliotttzhang.cn";
-  if (!origin.startsWith("https://")) {
+  const origin = process.argv[2] ?? process.env.PUBLIC_ORIGIN;
+  if (!origin) {
+    console.error("请指定实际游戏域名：npm run verify:campus -- https://实际域名");
+    process.exitCode = 1;
+  } else if (!origin.startsWith("https://")) {
     console.error("正式入口必须是 HTTPS 域名");
     process.exitCode = 1;
   } else {
