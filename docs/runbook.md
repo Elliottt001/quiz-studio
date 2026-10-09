@@ -1,5 +1,7 @@
 # 现场操作手册
 
+> 若使用校网 Linux 服务器长期运行并以既有域名作为统一入口，以[校网服务器部署说明](/Users/bytedance/Projects/xlab-annual-quiz/docs/campus-server-deploy.md)为启动、HTTPS、DNS 步骤；下文第 2 节是旧的现场主机直连 TLS 方案，不应与 systemd + Nginx 的配置混用。
+
 适用范围：2026 年 10 月 11 日 X-Lab 年度大会。本文件是本地 Web 应用的运行说明，不替代[游戏策划案](/Users/bytedance/Documents/X-Lab年会答题游戏策划案-定稿.md)、总议程和奖品执行单。
 
 ## 1. 会前必须到位

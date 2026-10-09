@@ -5,8 +5,9 @@ import { buildApp } from "./app.mjs";
 import { settleDueRounds } from "./rounds.mjs";
 import { scoreRound } from "./answers.mjs";
 import { backupDatabase } from "./backup.mjs";
-import { resolveStorage } from "./config.mjs";
+import { resolveStorage, validateCampusProxy } from "./config.mjs";
 
+validateCampusProxy(process.env);
 const storage = resolveStorage(process.env);
 const db = openDb(storage.game);
 let backupQueue = Promise.resolve();

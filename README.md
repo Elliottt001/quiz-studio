@@ -1,6 +1,6 @@
 # X-Lab 无限游戏
 
-2026 年度大会答题及虚拟小球抽奖系统。**一个持续运行的 Node.js 服务**提供玩家页、管理员控制台、大屏页、API 和 SQLite 数据库。要让 `x-lab.game.elliotttzhang.cn` 在任何电脑上提供完整游戏，必须将该服务部署到公网并连接持久化数据盘，不能只用 GitHub Pages。
+2026 年度大会答题及虚拟小球抽奖系统。**一个持续运行的 Node.js 服务**提供玩家页、管理员控制台、大屏页、API 和 SQLite 数据库。校网内同域名运行完整游戏请按[校网服务器部署说明](/Users/bytedance/Projects/xlab-annual-quiz/docs/campus-server-deploy.md)部署；GitHub Pages 只能提供静态说明页。
 
 ## 当前状态
 
@@ -12,7 +12,7 @@
 - 每位有资格者的虚拟球数是 `10 + 总分 / 10`，每次从未中奖者的剩余球中等概率抽一颗；中奖后移除该人的全部球，结果先保存再揭晓。
 - 管理员专用 JSON 导出、轮次／抽奖备份、深蓝虹彩主视觉的玩家端与大屏端。
 
-**尚未完成活动上线验收**：公网应用服务和持久化数据盘尚未创建；正式题库、真实奖品数量、HTTPS 域名与生产环境并发验证仍需落实。不要把 GitHub Pages 说明页或开发电脑链接作为正式答题入口。
+**尚未完成活动上线验收**：校网服务器地址、内网 DNS 覆写、有效 HTTPS 证书、正式题库、真实奖品数量与现场并发验证仍需落实。不要把 GitHub Pages 说明页或开发电脑链接作为正式答题入口。
 
 ## 本地开发
 
@@ -68,8 +68,8 @@ npm start
 
 ## 部署和应急
 
-目标部署方式见[公网完整服务迁移说明](/Users/bytedance/Projects/xlab-annual-quiz/docs/cloud-deploy.md)。开发时可按[本地运行手册](/Users/bytedance/Projects/xlab-annual-quiz/docs/runbook.md)验证流程；非本机地址必须配置直连 TLS 或显式可信 HTTPS 代理及管理员口令，否则服务器拒绝监听。
+本次目标部署方式见[校网服务器部署说明](/Users/bytedance/Projects/xlab-annual-quiz/docs/campus-server-deploy.md)；若日后需要校外访问，参见[公网服务迁移说明](/Users/bytedance/Projects/xlab-annual-quiz/docs/cloud-deploy.md)。开发时可按[本地运行手册](/Users/bytedance/Projects/xlab-annual-quiz/docs/runbook.md)验证流程；非本机地址必须配置直连 TLS 或显式可信 HTTPS 代理及管理员口令，否则服务器拒绝监听。
 
 ### GitHub Pages 公开说明页
 
-`npm run build:pages` 只打包 `pages/index.html` 与两张视觉图到 `dist-pages/`；现有 GitHub Pages 工作流发布的是**临时说明页**，不承载正式答题。完整服务部署成功后，需将该域名从 Pages 切换到云应用服务，并停用该域名的 Pages 绑定。先不要更改当前 DNS，否则会让现有地址失效。
+`npm run build:pages` 只打包 `pages/index.html` 与两张视觉图到 `dist-pages/`；现有 GitHub Pages 工作流发布的是**校外说明页**，不承载正式答题。若校网 DNS 为同名域名覆写至校内服务器，校内看到完整游戏，校外仍看到说明页。切换校内 DNS 前先验证后端、443 和有效证书。

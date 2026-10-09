@@ -1,0 +1,23 @@
+[Unit]
+Description=X-Lab annual quiz (campus network)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=xlab-game
+Group=xlab-game
+WorkingDirectory=/opt/xlab-annual-quiz
+EnvironmentFile=/etc/xlab-annual-quiz/game.env
+ExecStart=/usr/bin/node src/server/main.mjs
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/xlab-annual-quiz
+
+[Install]
+WantedBy=multi-user.target

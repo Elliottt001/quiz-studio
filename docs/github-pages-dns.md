@@ -1,12 +1,12 @@
 # GitHub Pages 与火山引擎 DNS 配置
 
-> 历史部署说明：这里的 GitHub Pages 配置目前只提供临时说明页。用户已要求该域名承载完整答题游戏，迁移步骤以 [cloud-deploy.md](/Users/bytedance/Projects/xlab-annual-quiz/docs/cloud-deploy.md) 为准。完成云服务验证后，需将当前火山引擎 CNAME 从 GitHub 改到云服务；**不能继续按本文将域名指向 Pages 并期待答题功能工作。**
+> GitHub Pages 当前只提供校外静态说明页。校网内要让同域名承载完整答题游戏，须按[校网服务器部署说明](/Users/bytedance/Projects/xlab-annual-quiz/docs/campus-server-deploy.md)做校网内 DNS 覆写、HTTPS 和持续运行服务；**不能继续按本文将域名指向 Pages 并期待答题功能工作。**
 
 公开地址：`x-lab.game.elliotttzhang.cn`
 
 ## 发布内容与运行边界
 
-本仓库的 `.github/workflows/pages.yml` 只部署 `pages/index.html` 和两张位于 `public/brand/` 的图片。Pages 上是**公开指引页**，不运行 `src/server/`，也不处理玩家注册、答卷、积分或抽奖。正式游戏仍运行在会场专用电脑；如果把 `public/` 原样部署到 Pages，玩家打开页面会找不到 `/api/*`，游戏无法使用。
+本仓库的 `.github/workflows/pages.yml` 只部署 `pages/index.html` 和两张位于 `public/brand/` 的图片。Pages 上是**公开指引页**，不运行 `src/server/`，也不处理玩家注册、答卷、积分或抽奖。正式游戏运行在校网服务器；如果把 `public/` 原样部署到 Pages，玩家打开页面会找不到 `/api/*`，游戏无法使用。
 
 工作流使用 **GitHub Actions** 作为 Pages 来源。在此模式下，仓库里的 `CNAME` 文件不是设置自定义域名的办法；需在仓库 `Settings → Pages → Custom domain` 配置，或通过 GitHub Pages API 配置。项目首次发布后，可在 `Settings → Pages` 核查域名和 `Enforce HTTPS` 状态。
 

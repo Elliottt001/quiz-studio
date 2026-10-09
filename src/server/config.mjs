@@ -11,3 +11,17 @@ export function resolveStorage(env = process.env) {
     backup: join(directory, "backup-latest.sqlite")
   };
 }
+
+export function validateCampusProxy(env = process.env) {
+  if (env.CAMPUS_PROXY_ONLY !== "1") return;
+  if (env.HOST !== "127.0.0.1" || env.TRUSTED_HTTPS_PROXY !== "1"
+    || !env.ADMIN_PASSWORD_HASH || !env.DATA_DIR?.startsWith("/")
+    || !env.PUBLIC_ORIGIN || env.TLS_CERT_PATH || env.TLS_KEY_PATH) {
+    throw new Error("校网代理模式要求本机监听、HTTPS 代理、管理员哈希、绝对数据目录和正式域名");
+  }
+  let origin;
+  try { origin = new URL(env.PUBLIC_ORIGIN); } catch {}
+  if (!origin || origin.protocol !== "https:" || origin.origin !== env.PUBLIC_ORIGIN) {
+    throw new Error("校网代理模式的 PUBLIC_ORIGIN 必须是 HTTPS 域名源地址");
+  }
+}
