@@ -31,6 +31,9 @@ export function buildApp(db, clock = Date.now, options = {}) {
   if (previewOrigin && (!publicOrigin || !previewOrigin.startsWith("https://"))) {
     throw new Error("预览域名必须与公网域名一起使用 HTTPS");
   }
+  if (options.campusHttpOnly && (publicOrigin || previewOrigin || options.tls || options.tlsTerminated)) {
+    throw new Error("校网 HTTP 直连模式不能混用 HTTPS 配置");
+  }
   const routes = [];
   const tickers = [];
   let interval;
@@ -139,9 +142,10 @@ export function buildApp(db, clock = Date.now, options = {}) {
         return Promise.reject(new Error("缺少网页构建产物，请先运行 npm run build"));
       }
       if (!["127.0.0.1", "::1", "localhost"].includes(host)
-        && (!(options.tls?.cert && options.tls?.key) && !(options.tlsTerminated && publicOrigin)
+        && (!(options.tls?.cert && options.tls?.key)
+          && !(options.tlsTerminated && publicOrigin) && !options.campusHttpOnly
           || !options.adminPasswordHash)) {
-        return Promise.reject(new Error("局域网运行需要受信任的 HTTPS/TLS 证书与管理员口令"));
+        return Promise.reject(new Error("局域网运行需要显式校网 HTTP 模式或 HTTPS/TLS 证书，以及管理员口令"));
       }
       return new Promise((resolve, reject) => {
         server.once("error", reject);

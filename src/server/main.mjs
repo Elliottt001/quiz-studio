@@ -5,9 +5,10 @@ import { buildApp } from "./app.mjs";
 import { settleDueRounds } from "./rounds.mjs";
 import { scoreRound } from "./answers.mjs";
 import { backupDatabase } from "./backup.mjs";
-import { resolveStorage, validateCampusProxy } from "./config.mjs";
+import { resolveStorage, validateCampusProxy, validateCampusHttp } from "./config.mjs";
 
 validateCampusProxy(process.env);
+validateCampusHttp(process.env);
 const storage = resolveStorage(process.env);
 const db = openDb(storage.game);
 let backupQueue = Promise.resolve();
@@ -26,6 +27,7 @@ const app = buildApp(db, Date.now, {
   publicOrigin: process.env.PUBLIC_ORIGIN,
   previewOrigin: process.env.PREVIEW_ORIGIN,
   tlsTerminated: process.env.TRUSTED_HTTPS_PROXY === "1",
+  campusHttpOnly: process.env.CAMPUS_HTTP_ONLY === "1",
   secureCookies: !!tls || process.env.TRUSTED_HTTPS_PROXY === "1",
   onCriticalChange: saveSnapshot,
   staticDir: resolve("dist")

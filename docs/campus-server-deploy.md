@@ -1,22 +1,21 @@
-# 校网服务器部署：用服务器域名提供完整游戏
+# 校网服务器部署：HTTP IP 直连完整游戏
 
-适用于 **Linux + systemd + Nginx**、参会设备均能访问校网内网服务器的情形。GitHub 只保存程序；唯一的生产 Node 进程和 SQLite 数据库均运行在校网服务器。玩家、管理员与大屏都使用**服务器实际 HTTPS 域名**，分别访问 `/`、`/admin.html`、`/display.html`。普通电脑与公用电脑完全一样，都用个人登录码和密码进入，操作后退出。管理员用独立口令登录后台。
+适用于会场所有设备连同一校网、能访问一台 Linux 服务器的情形。GitHub 只保存代码；Node 服务和 SQLite 数据库在服务器上持续运行。微信群发送 `http://服务器内网IP:4173/`，所有手机、个人电脑、公用电脑都打开同一个玩家入口。管理员用 `http://服务器内网IP:4173/admin.html`，大屏用 `http://服务器内网IP:4173/display.html`。不需要 Nginx、DNS、HTTPS 证书或 GitHub Pages 代理。
 
-## 前提：网络和证书
+## 必须先确认
 
-向校网管理员确认：服务器有**固定校网 IP**，会场 Wi-Fi 客户端能访问该 IP 的 TCP 443（没有客户端隔离），**服务器域名已在这些设备上解析到这个 IP**。如果服务器域名已有可用的校网解析，直接使用它，不需要动火山引擎、原有公网链接或 GitHub Pages。不要把 `4173` 端口暴露到校网。
+- 服务器有固定的私有 IPv4 地址（如 `10.x.x.x`、`172.16–31.x.x` 或 `192.168.x.x`）；会场校网/Wi-Fi 的约 200 台设备能够访问服务器的 TCP 4173，且无线客户端未被隔离。**不要把 `127.0.0.1` 发给参会者**：那代表各人自己的设备。
+- 服务器所在网段**不可从公网访问**；由校网管理员在边界防火墙及服务器防火墙上只允许会场校网来源访问 TCP 4173。`HOST=0.0.0.0` 会监听服务器所有网卡，**配置文件本身不能代替防火墙**。
+- HTTP 明文传输注册资料、玩家密码、管理员口令及会话 Cookie；共享或不可信的校网用户可能截获或篡改流量。不要复用任何私人密码；管理员只在受控电脑登录，操作后退出。若校网无法隔离非参会者或有更高保密需求，应使用 HTTPS，而非此方案。
+- 部分手机/微信内浏览器可能对 HTTP 链接弹出风险提示或限制打开；用现场实际手机和微信提前测试，必要时改用系统浏览器。保持使用 `http://`，不能写成 `https://`。
 
-Nginx 必须使用手机/微信信任的、**针对所选服务器域名的有效证书**。如果校网服务器域名已有学校提供的有效证书，直接复用；否则由域名管理员签发，例如内网服务器可使用 DNS-01 验证。手动 DNS-01 签发**不会自动续期**；上线前记录到期日、实际续期和 Nginx 重载方案。不要让参与者忽略证书错误。
+## 安装并设置开机常驻
 
-这套部署只保证**连着校网的设备**可用同一网址答题；校外蜂窝网络对服务器域名可能无法访问。原 `x-lab.game.elliotttzhang.cn` 不需要改动，校外访问它仍会看到 GitHub Pages 说明页。若需校外也可答题，必须另外有可从公网访问的反向代理/网关，此手册不宣称已完成。
-
-## 安装与常驻运行
-
-在服务器上安装 Node.js **24.19.0+ 的 24.x**、Nginx、Git；确认 `node --version`，然后检查真实 Node 路径。以下按 `/usr/bin/node` 编写服务文件，若服务器 Node 安装在其他路径，**先修改**服务文件中的 `ExecStart`，不能照搬本机 nvm 的路径。以有管理权限的操作员执行以下操作：
+在服务器安装 Node.js **24.19.0+ 的 24.x**、Git，确认 `node --version` 和 `command -v node`。下面的 systemd 文件默认 Node 位于 `/usr/bin/node`；路径不同要改 `ExecStart`。以下命令在服务器上运行，按发行版调整用户创建命令：
 
 ```bash
 sudo useradd --system --home-dir /opt/xlab-annual-quiz --shell /usr/sbin/nologin xlab-game
-sudo mkdir -p /opt /var/lib/xlab-annual-quiz /etc/xlab-annual-quiz
+sudo mkdir -p /var/lib/xlab-annual-quiz /etc/xlab-annual-quiz
 sudo chown xlab-game:xlab-game /var/lib/xlab-annual-quiz
 sudo chmod 700 /var/lib/xlab-annual-quiz
 sudo git clone https://github.com/Elliottt001/xlab-annual-quiz.git /opt/xlab-annual-quiz
@@ -28,7 +27,7 @@ sudo cp deploy/campus/game.env.example /etc/xlab-annual-quiz/game.env
 sudo cp deploy/campus/xlab-annual-quiz.service /etc/systemd/system/
 ```
 
-运行 `node scripts/admin-password.mjs`，**在服务器终端交互输入**至少 16 字符的管理口令，只把生成的哈希填入 `/etc/xlab-annual-quiz/game.env` 的 `ADMIN_PASSWORD_HASH=`；将 `PUBLIC_ORIGIN` 改为**实际服务器 HTTPS 域名**，不要保留模板中的 `quiz.campus.example.edu.cn`。不要在聊天、脚本或 Git 提交中留明文口令。这个文件应由 root 保管，允许 systemd 读取：
+运行 `node scripts/admin-password.mjs`，在服务器终端输入至少 16 字符的**单独管理员口令**，将输出的哈希替换 `/etc/xlab-annual-quiz/game.env` 中的占位符。环境文件保持 `CAMPUS_HTTP_ONLY=1`、`HOST=0.0.0.0`、`PORT=4173`、绝对路径 `DATA_DIR=/var/lib/xlab-annual-quiz`；不要同时设置 `PUBLIC_ORIGIN`、`TRUSTED_HTTPS_PROXY`、`CAMPUS_PROXY_ONLY` 或 TLS 路径。不要把明文口令发群、写进 Git 或 shell 历史。然后：
 
 ```bash
 sudo chmod 600 /etc/xlab-annual-quiz/game.env
@@ -39,32 +38,20 @@ sudo systemctl status xlab-annual-quiz
 curl -fsS http://127.0.0.1:4173/api/health
 ```
 
-此时只是本机后端就绪。把**实际服务器域名**及**已签发证书的实际路径**填到 `deploy/campus/xlab-annual-quiz.nginx.conf` 的 `server_name`、`ssl_certificate`、`ssl_certificate_key`；这四处要和 `PUBLIC_ORIGIN` 完全对应。安装到 Nginx 的站点目录，先测试配置再重载（下例为 Debian/Ubuntu 的目录，其他发行版按实际目录调整）：
+若服务启动失败，查看 `sudo journalctl -u xlab-annual-quiz -n 100 --no-pager`；优先检查 Node 路径、构建产物、管理员哈希、文件权限和端口占用。按学校防火墙流程仅向会场校网开放 TCP 4173，不要无范围地运行“向所有人开放端口”的命令。
+
+## 验收后发群
+
+把示例 `10.12.34.56` 全部换成服务器**实际固定内网 IP**：
 
 ```bash
-sudo cp deploy/campus/xlab-annual-quiz.nginx.conf /etc/nginx/sites-available/xlab-annual-quiz
-sudo ln -s /etc/nginx/sites-available/xlab-annual-quiz /etc/nginx/sites-enabled/xlab-annual-quiz
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-确保校网防火墙允许到服务器的 443，但不要开放 4173。后台浏览器与玩家使用**同一个 HTTPS 域名**；不需要在校网服务器上给每个人开账号，也不要把服务器的 `127.0.0.1` 发到微信群。
-
-## 真正上线前的验证
-
-在连着**会场校网**的手机（包括微信内浏览器）和个人电脑上检查所选域名解析到固定校网 IP，且证书无警告。下例的 `quiz.campus.example.edu.cn` **仅为占位符**，每处都换成实际服务器域名：
-
-```bash
-dig +short quiz.campus.example.edu.cn
-curl -fsS https://quiz.campus.example.edu.cn/api/health
+curl -fsS http://10.12.34.56:4173/api/health
 cd /opt/xlab-annual-quiz
-npm run verify:campus -- https://quiz.campus.example.edu.cn
+npm run verify:campus -- http://10.12.34.56:4173
 ```
 
-自检必须同时返回 `health/player/admin/display: true`；之后用两个独立设备验证注册、退出、换机登录、管理员开轮、五分钟自动收卷、积分排名和抽奖。用**独立演练数据库**测四轮完整流程，勿将测试题、账号和奖品导入正式库。正式库至少导入审核后的 30 道题及真实奖品才能使用。再次重启 `sudo systemctl restart xlab-annual-quiz`，确认账号/分数仍在，再验收 200 人连接与最后一秒集中交卷。
+自检要同时得到 `health/player/admin/display: true`。还必须从会场校网的**两部真实手机**（包括微信群里点链接）和一台电脑访问同一 IP，验证注册、退出、换机登录、管理员开轮、5 分钟自动收卷、排名与抽奖；关闭移动数据测试校网路径。用独立演练数据库测四轮完整流程，勿把测试题目和奖品带入正式库；正式库须导入审核后的 30 题及真实奖品。重启 `sudo systemctl restart xlab-annual-quiz` 后确认账号和分数仍在，验收约 200 人并发及最后一秒集中交卷。
 
-`systemctl enable --now` 保证开机自动启动；`Restart=always` 保证异常退出后重启，**不保证服务器断电、磁盘损坏、校网故障时持续可用**。定期将 `backup-latest.sqlite` 的已校验快照复制到独立介质/备用服务器，不能只保存同机副本。查看实时日志：`sudo journalctl -u xlab-annual-quiz -f`；应用健康检查失败时核查服务、Nginx、DNS、证书、磁盘空间和校网隔离。更新代码前先做备份和恢复演练，确认题库与状态不被演练污染。
+`systemctl enable --now` 实现开机自启，`Restart=always` 在异常退出后重启；断电、网络故障或磁盘损坏不在此保证之内。运行日志用 `sudo journalctl -u xlab-annual-quiz -f` 查看。定期把 `backup-latest.sqlite` 的有效快照复制到独立介质，并演练恢复。会后限制访问或停服务，按活动方的数据保留要求清理真名、登录资料和答题记录。
 
-## 域名不会自动生效的边界
-
-服务器真实域名、IP、证书和登录方式不在仓库里，无法远程代填；在这些信息到位并通过真实设备验收前，**不要把任何域名宣称为正式答题入口**。不能仅推送 GitHub 代码就使运行中的服务器自动更新，也不能靠 Pages 的 yml 承载游戏。所选服务器域名如无有效证书或校网解析，需要学校网络管理员协助，不能通过浏览器跳过 TLS 警告解决。
+原 `https://x-lab.game.elliotttzhang.cn/` 的 GitHub Pages 仍只是说明页，**不会自动转发到内网服务器**。推送仓库也不会自动更新已运行服务；更新前备份数据库，在服务器拉取代码、重新构建并重启服务。仓库保留了 HTTPS 代理模板，日后有证书时可另外切换，不能同时混用两种模式。
