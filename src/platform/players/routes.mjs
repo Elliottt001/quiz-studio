@@ -12,6 +12,17 @@ const gamePath = "([a-z0-9-]{3,48})";
 export function registerPlayerRoutes(app) {
   const failures = new Map();
   const failedRecovery = new Map();
+  app.route("GET", new RegExp(`^/v2/games/${gamePath}/session$`),
+    async ({ pool, params, req }) => {
+      const game = await publishedGame(pool, params[0]);
+      try {
+        await requirePlayerForGame(pool, req, game.id);
+        return { body: { authenticated: true } };
+      } catch (error) {
+        if (error.status !== 401) throw error;
+        return { body: { authenticated: false } };
+      }
+    });
   app.route("GET", new RegExp(`^/v2/games/${gamePath}/registration$`),
     async ({ pool, params }) => {
       const game = await publishedGame(pool, params[0]);
