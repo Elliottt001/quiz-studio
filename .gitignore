@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-pages/
+dist-platform/
 .superpowers/
 .env
 .env.*

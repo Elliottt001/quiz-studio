@@ -1,0 +1,99 @@
+.entry-layout {
+  width: min(100% - 36px, 1040px);
+  margin: 0 auto;
+  padding: clamp(70px, 14vh, 160px) 0 72px;
+}
+
+.entry-card {
+  max-width: 740px;
+  padding: clamp(24px, 5vw, 64px);
+  background: #fffdf7;
+  box-shadow: 12px 12px 0 var(--ink);
+}
+
+.level-chip,
+.eyebrow {
+  display: inline-block;
+  color: var(--ink-soft);
+  font-size: 12px;
+  letter-spacing: .13em;
+}
+
+.level-chip {
+  padding: 8px 12px;
+  border: 3px solid var(--line);
+  background: var(--mint);
+  color: var(--ink);
+}
+
+.pixel-heading {
+  margin: 28px 0 24px;
+  font-size: clamp(26px, 4vw, 44px);
+  line-height: 1.45;
+  letter-spacing: .04em;
+}
+
+.entry-card .nes-btn {
+  margin-top: 24px;
+}
+
+.entry-note {
+  margin-top: 36px;
+  color: var(--ink-soft);
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px clamp(18px, 4vw, 56px);
+  border-bottom: 4px solid var(--line);
+  background: #fffdf7;
+}
+
+.wordmark {
+  color: var(--ink);
+  font-size: 18px;
+  text-decoration: none;
+}
+
+.header-meta {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.app-shell {
+  width: min(100% - 36px, 1140px);
+  margin: 0 auto;
+  padding: 52px 0 96px;
+}
+
+@media (max-width: 520px) {
+  .entry-layout,
+  .app-shell {
+    width: min(100% - 28px, 1140px);
+  }
+
+  .entry-card {
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+
+  .site-header {
+    padding: 16px 14px;
+  }
+
+  .header-meta {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
