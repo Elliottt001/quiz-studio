@@ -25,22 +25,30 @@ async function readHidden(message) {
   stdin.resume();
   let value = "";
   try {
-    for await (const chunk of stdin) {
-      for (const char of chunk.toString("utf8")) {
-        if (char === "\r" || char === "\n") {
-          stderr.write("\n");
-          return value;
+    return await new Promise((resolve, reject) => {
+      const onData = (chunk) => {
+        for (const char of chunk.toString("utf8")) {
+          if (char === "\r" || char === "\n") {
+            stdin.off("data", onData);
+            stderr.write("\n");
+            resolve(value);
+            return;
+          }
+          if (char === "\u0003") {
+            stdin.off("data", onData);
+            reject(new Error("已取消"));
+            return;
+          }
+          if (char === "\u007f") { value = value.slice(0, -1); continue; }
+          value += char;
         }
-        if (char === "\u0003") throw new Error("已取消");
-        if (char === "\u007f") { value = value.slice(0, -1); continue; }
-        value += char;
-      }
-    }
+      };
+      stdin.on("data", onData);
+    });
   } finally {
     stdin.setRawMode(false);
     stdin.pause();
   }
-  throw new Error("未收到口令");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
