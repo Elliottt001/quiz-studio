@@ -1,6 +1,8 @@
 import { createServer } from "node:http";
 import { registerOrganizerRoutes } from "../organizers/routes.mjs";
+import { requireOrganizer } from "../auth/sessions.mjs";
 import { registerGameRoutes } from "../games/routes.mjs";
+import { requireGameRole } from "../games/repository.mjs";
 import { registerPlayerRoutes } from "../players/routes.mjs";
 import { registerQuizRoutes } from "../quiz/routes.mjs";
 import { settleDueRounds } from "../quiz/repository.mjs";
@@ -76,11 +78,25 @@ export function buildPlatformApp({
           }
         }
       }
+      const largeRoundEdit = (req.method === "PUT"
+        && /^\/v2\/games\/([0-9a-fA-F-]{36})\/rounds\/[0-9a-fA-F-]{36}$/.test(url.pathname))
+        || (req.method === "POST"
+        && /^\/v2\/games\/([0-9a-fA-F-]{36})\/rounds$/.test(url.pathname));
+      if (largeRoundEdit) {
+        const actor = await requireOrganizer(pool, req);
+        const gameId = url.pathname.split("/")[3];
+        await requireGameRole(pool, gameId, actor.id, ["owner"]);
+      }
+      const maxBytes = largeRoundEdit ? 1_048_576 : 65_536;
+      const contentLength = Number(req.headers["content-length"]);
+      if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+        throw httpError(413, "请求过大");
+      }
       const chunks = [];
       let bytes = 0;
       for await (const chunk of req) {
         bytes += chunk.length;
-        if (bytes > 65_536) throw httpError(413, "请求过大");
+        if (bytes > maxBytes) throw httpError(413, "请求过大");
         chunks.push(chunk);
       }
       const receivedAt = clock();

@@ -55,11 +55,12 @@ export async function createRound(pool, gameId, organizerId, input) {
     [gameId, randomUUID(), input.position, input.title.trim(), input.durationMs])).rows[0];
     for (const question of input.questions) {
       await client.query(`INSERT INTO questions
-        (game_id,id,round_id,position,kind,prompt,options_json,correct_option,points)
-        VALUES($1,$2,$3,$4,'choice',$5,$6::jsonb,$7,$8)`,
+        (game_id,id,round_id,position,kind,prompt,options_json,correct_option,points,answer_rule_json)
+        VALUES($1,$2,$3,$4,'choice',$5,$6::jsonb,$7,$8,$9::jsonb)`,
       [gameId, randomUUID(), row.id, question.position, question.prompt.trim(),
         JSON.stringify(question.options.map((option) => option.trim())),
-        question.correctOption, question.points]);
+        question.correctOption, question.points,
+        JSON.stringify({ correctOption: question.correctOption })]);
     }
     await client.query(`INSERT INTO audit_events(game_id,actor_id,kind,target_id,occurred_at)
       VALUES($1,$2,'round_created',$3,$4)`, [gameId, organizerId, row.id, Date.now()]);

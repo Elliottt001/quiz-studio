@@ -150,7 +150,9 @@ test("standalone v2 health reports database readiness and HTTP flow has no seede
     connectionString: process.env.TEST_DATABASE_URL, searchPath: schema
   });
   const owner = await createOrganizer(pool, { login: "owner", password: "owner-password-1" });
-  const app = buildPlatformApp({ pool: runtimePool, publicOrigin: "https://quiz.example" });
+  const app = buildPlatformApp({
+    pool: runtimePool, publicOrigin: "https://quiz.example", autoSettle: false
+  });
   const base = await app.listen(0);
   const post = (path, body, cookie) => fetch(base + path, {
     method: "POST", headers: { origin: "https://quiz.example", "x-quiz-action": "1",

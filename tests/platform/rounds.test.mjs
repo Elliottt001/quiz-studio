@@ -24,6 +24,9 @@ test("games have independent configurable rounds and concurrent start is single-
     const one = await createRound(pool, gameA.id, alice.id, {
       position: 1, title: "Speed quiz", durationMs: 90_000, questions: [question()]
     });
+    assert.deepEqual((await pool.query(`SELECT answer_rule_json FROM questions
+      WHERE game_id=$1 AND round_id=$2`, [gameA.id, one.id])).rows[0].answer_rule_json,
+    { correctOption: 1 });
     await createRound(pool, gameB.id, bob.id, {
       position: 1, title: "Long quiz", durationMs: 600_000, questions: [question(), question(2)]
     });
