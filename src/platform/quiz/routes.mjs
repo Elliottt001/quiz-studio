@@ -1,6 +1,7 @@
 import { requireOrganizer } from "../auth/sessions.mjs";
 import { publishedGame } from "../players/repository.mjs";
 import { requirePlayerForGame } from "../players/repository.mjs";
+import { saveDraft } from "../players/drafts.mjs";
 import {
   createRound, getPublicRound, publishGame, startRound, submitAnswers
 } from "./repository.mjs";
@@ -61,6 +62,15 @@ export function registerQuizRoutes(app) {
       });
       return { status: 201, body: receipt };
     });
+  app.route("PUT", new RegExp(`^/v2/games/${slug}/rounds/${uuid}/draft$`),
+    async ({ req, params, body, pool, receivedAt }) => {
+      const game = await publishedGame(pool, params[0]);
+      const playerId = await requirePlayerForGame(pool, req, game.id);
+      return { body: await saveDraft(pool, {
+        gameId: game.id, playerId, roundId: params[1],
+        answers: body?.answers, receivedAt
+      }) };
+    });
   app.route("GET", new RegExp(`^/v2/games/${slug}/rounds/${uuid}/my$`),
     async ({ req, params, pool }) => {
       const game = await publishedGame(pool, params[0]);
@@ -68,6 +78,9 @@ export function registerQuizRoutes(app) {
       const round = (await pool.query("SELECT status FROM rounds WHERE game_id=$1 AND id=$2",
         [game.id, params[1]])).rows[0];
       if (!round) return { status: 404, body: { error: "轮次不存在" } };
+      const draft = (await pool.query(`SELECT answers_json,saved_at FROM drafts
+        WHERE game_id=$1 AND player_id=$2 AND round_id=$3`,
+      [game.id, playerId, params[1]])).rows[0];
       const submitted = (await pool.query(`SELECT id,revision,submitted_at,answers_json FROM submissions
         WHERE game_id=$1 AND player_id=$2 AND round_id=$3 ORDER BY revision DESC LIMIT 1`,
       [game.id, playerId, params[1]])).rows[0];
@@ -76,7 +89,9 @@ export function registerQuizRoutes(app) {
           WHERE game_id=$1 AND player_id=$2 AND round_id=$3`,
         [game.id, playerId, params[1]])).rows[0]?.points ?? null
         : null;
-      return { body: { submission: submitted ? {
+      return { body: { draft: draft
+        ? { answers: draft.answers_json, savedAt: Number(draft.saved_at) } : null,
+      submission: submitted ? {
         id: submitted.id, revision: submitted.revision,
         submittedAt: Number(submitted.submitted_at), answers: submitted.answers_json
       } : null, score } };
