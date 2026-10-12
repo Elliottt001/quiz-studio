@@ -2,6 +2,7 @@ import { clearSessionCookie, sessionCookie } from "../auth/sessions.mjs";
 import { httpError } from "../http/errors.mjs";
 import { requireOrganizer } from "../auth/sessions.mjs";
 import { requireGameRole } from "../games/repository.mjs";
+import { issueRecovery, redeemRecovery } from "./recovery.mjs";
 import {
   loginPlayer, logoutPlayer, publishedGame, registerPlayer, requirePlayerForGame
 } from "./repository.mjs";
@@ -10,6 +11,7 @@ const gamePath = "([a-z0-9-]{3,48})";
 
 export function registerPlayerRoutes(app) {
   const failures = new Map();
+  const failedRecovery = new Map();
   app.route("GET", new RegExp(`^/v2/games/${gamePath}/registration$`),
     async ({ pool, params }) => {
       const game = await publishedGame(pool, params[0]);
@@ -38,6 +40,40 @@ export function registerPlayerRoutes(app) {
         id: row.id, displayName: row.display_name, profile: row.profile_json,
         score: row.score
       })) } };
+    });
+  app.route("POST", /^\/v2\/games\/([0-9a-fA-F-]{36})\/players\/([0-9a-fA-F-]{36})\/recovery$/,
+    async ({ pool, params, req, clock }) => {
+      const actor = await requireOrganizer(pool, req);
+      const code = await issueRecovery(pool, params[0], params[1], actor.id, clock());
+      return { body: { code } };
+    });
+  app.route("POST", new RegExp(`^/v2/games/${gamePath}/recover$`),
+    async ({ pool, params, body, clock, secure, req }) => {
+      const game = await publishedGame(pool, params[0]);
+      const key = `${game.id}:${req.socket.remoteAddress}:${
+        typeof body?.code === "string" ? body.code.slice(0, 12) : ""}`;
+      const entry = failedRecovery.get(key);
+      if (entry?.until > clock() && entry.count >= 8) {
+        throw httpError(429, "恢复尝试过多，请稍后再试");
+      }
+      try {
+        const result = await redeemRecovery(pool, game.id, body?.code, body?.password, clock());
+        failedRecovery.delete(key);
+        return { headers: {
+          "set-cookie": sessionCookie(`game_session_${game.slug}`, result.sessionToken, secure)
+        }, body: { id: result.playerId, loginCode: result.loginCode } };
+      } catch (error) {
+        if (error.status === 409) {
+          failedRecovery.set(key, {
+            count: (entry?.until > clock() ? entry.count : 0) + 1,
+            until: clock() + 60_000
+          });
+          if (failedRecovery.size > 2_000) {
+            failedRecovery.delete(failedRecovery.keys().next().value);
+          }
+        }
+        throw error;
+      }
     });
   app.route("POST", new RegExp(`^/v2/games/${gamePath}/players$`),
     async ({ pool, params, body, secure }) => {

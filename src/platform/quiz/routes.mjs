@@ -9,11 +9,14 @@ import {
   saveRound, deleteRound, reorderRounds, publishFrozen
 } from "./editor.mjs";
 import { voidQuestion } from "./corrections.mjs";
+import { publicState } from "./state.mjs";
 
 const uuid = "([0-9a-fA-F-]{36})";
 const slug = "([a-z0-9-]{3,48})";
 
 export function registerQuizRoutes(app) {
+  app.route("GET", new RegExp(`^/v2/games/${slug}/state$`),
+    async ({ pool, params, clock }) => ({ body: await publicState(pool, params[0], clock()) }));
   app.route("POST", new RegExp(`^/v2/games/${uuid}/rounds$`),
     async ({ req, params, body, pool }) => {
       const actor = await requireOrganizer(pool, req);
