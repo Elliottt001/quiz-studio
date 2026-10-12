@@ -3,8 +3,8 @@ import { isDeepStrictEqual } from "node:util";
 import { withTransaction } from "../db/pool.mjs";
 import { requireGameRole } from "../games/repository.mjs";
 import { httpError } from "../http/errors.mjs";
-import { scoreAnswer } from "./scoring.mjs";
 import { validateAnswer } from "./rules.mjs";
+import { rescoreRound } from "./corrections.mjs";
 import { bumpDraftVersion, publishFrozen } from "./editor.mjs";
 
 function publicRound(row) {
@@ -107,12 +107,15 @@ export async function getPublicRound(pool, gameId, roundId) {
     [gameId, roundId])).rows[0];
   if (!row) throw httpError(404, "轮次不存在");
   const visible = ["open", "published"].includes(row.status);
-  const questions = visible ? (await pool.query(`SELECT id,position,kind,prompt,options_json,
-    correct_option,answer_rule_json,points FROM questions
-    WHERE game_id=$1 AND round_id=$2 ORDER BY position`,
+  const questions = visible ? (await pool.query(`SELECT q.id,q.position,q.kind,q.prompt,
+    q.options_json,q.correct_option,q.answer_rule_json,q.points,
+    v.question_id AS voided FROM questions q
+    LEFT JOIN voided_questions v ON v.game_id=q.game_id AND v.question_id=q.id
+    WHERE q.game_id=$1 AND q.round_id=$2 ORDER BY q.position`,
   [gameId, roundId])).rows.map((q) => ({
     id: q.id, position: q.position, kind: q.kind, prompt: q.prompt,
     points: q.points,
+    ...(row.status === "published" ? { voided: !!q.voided } : {}),
     ...(q.options_json ? { options: q.options_json } : {}),
     ...(q.kind === "length" ? { answerRule: q.answer_rule_json } : {}),
     ...(row.status === "published" && q.kind !== "length"
@@ -195,22 +198,7 @@ export async function settleDueRounds(pool, now, pendingFor = () => false) {
         || Number(round.deadline_at) > now || pendingFor(slug, roundId)) return false;
       await client.query(`UPDATE rounds SET status='settling' WHERE game_id=$1 AND id=$2`,
         [gameId, roundId]);
-      const questions = (await client.query(`SELECT id,kind,options_json,
-        answer_rule_json,points FROM questions
-        WHERE game_id=$1 AND round_id=$2 ORDER BY position`, [gameId, roundId])).rows;
-      const latest = (await client.query(`SELECT DISTINCT ON (player_id) player_id,answers_json
-        FROM submissions WHERE game_id=$1 AND round_id=$2 ORDER BY player_id,revision DESC`,
-      [gameId, roundId])).rows;
-      for (const submission of latest) {
-        const detail = Object.fromEntries(questions.map((q) =>
-          [q.id, scoreAnswer(mapQuestion(q), submission.answers_json[q.id])]));
-        const points = Object.values(detail).reduce((total, value) => total + value, 0);
-        await client.query(`INSERT INTO round_scores
-          (game_id,player_id,round_id,points,detail_json) VALUES($1,$2,$3,$4,$5::jsonb)
-          ON CONFLICT(game_id,player_id,round_id)
-          DO UPDATE SET points=excluded.points,detail_json=excluded.detail_json`,
-        [gameId, submission.player_id, roundId, points, JSON.stringify(detail)]);
-      }
+      await rescoreRound(client, gameId, roundId);
       await client.query(`UPDATE rounds SET status='published',published_at=$3
         WHERE game_id=$1 AND id=$2`, [gameId, roundId, now]);
       await client.query(`INSERT INTO audit_events(game_id,actor_id,kind,target_id,occurred_at)

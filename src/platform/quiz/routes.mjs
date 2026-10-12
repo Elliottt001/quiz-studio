@@ -8,6 +8,7 @@ import {
 import {
   saveRound, deleteRound, reorderRounds, publishFrozen
 } from "./editor.mjs";
+import { voidQuestion } from "./corrections.mjs";
 
 const uuid = "([0-9a-fA-F-]{36})";
 const slug = "([a-z0-9-]{3,48})";
@@ -36,6 +37,12 @@ export function registerQuizRoutes(app) {
     async ({ req, params, body, pool }) => {
       const actor = await requireOrganizer(pool, req);
       return { body: await reorderRounds(pool, params[0], actor.id, body) };
+    });
+  app.route("POST", new RegExp(`^/v2/games/${uuid}/questions/${uuid}/void$`),
+    async ({ req, params, body, pool, clock }) => {
+      const actor = await requireOrganizer(pool, req);
+      return { body: await voidQuestion(pool, params[0], params[1],
+        actor.id, body?.reason, clock()) };
     });
   app.route("POST", new RegExp(`^/v2/games/${uuid}/publish$`),
     async ({ req, params, pool }) => {
