@@ -135,7 +135,10 @@ export function buildPlatformApp({
           "content-type": "application/json; charset=utf-8",
           "cache-control": "no-store"
         });
-        res.end(JSON.stringify({ error: error.status ? error.message : "服务暂不可用" }));
+        res.end(JSON.stringify(error.status
+          ? { error: error.message, ...(error.details ?? {}),
+            ...(error.path ? { path: error.path } : {}) }
+          : { error: "服务暂不可用" }));
       }
       if (!error.status) console.error("Platform HTTP error:", error);
     } finally {
