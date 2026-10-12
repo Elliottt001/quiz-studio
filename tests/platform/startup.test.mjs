@@ -7,8 +7,11 @@ import { newPlatformFixture } from "./helpers.mjs";
 test("bootstrap creates exactly one platform administrator and rejects a second", async () => {
   const { pool, close } = await newPlatformFixture();
   try {
+    await assert.rejects(bootstrapPlatformOwner(pool, {
+      login: "too-short", password: "abc12"
+    }), /至少6字符/);
     const first = await bootstrapPlatformOwner(pool, {
-      login: "platform-owner", password: "secure-platform-owner-phrase"
+      login: "platform-owner", password: "abc123"
     });
     assert.equal(first.platformAdmin, true);
     await assert.rejects(bootstrapPlatformOwner(pool, {

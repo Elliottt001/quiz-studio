@@ -27,7 +27,7 @@ sudo cp deploy/campus/game.env.example /etc/xlab-annual-quiz/game.env
 sudo cp deploy/campus/xlab-annual-quiz.service /etc/systemd/system/
 ```
 
-运行 `node scripts/admin-password.mjs`，在服务器终端输入至少 16 字符的**单独管理员口令**，将输出的哈希替换 `/etc/xlab-annual-quiz/game.env` 中的占位符。环境文件保持 `CAMPUS_HTTP_ONLY=1`、`HOST=0.0.0.0`、`PORT=4173`、绝对路径 `DATA_DIR=/var/lib/xlab-annual-quiz`；不要同时设置 `PUBLIC_ORIGIN`、`TRUSTED_HTTPS_PROXY`、`CAMPUS_PROXY_ONLY` 或 TLS 路径。不要把明文口令发群、写进 Git 或 shell 历史。然后：
+运行 `node scripts/admin-password.mjs`，在服务器终端输入至少 6 字符的**单独管理员口令**，将输出的哈希替换 `/etc/xlab-annual-quiz/game.env` 中的占位符。环境文件保持 `CAMPUS_HTTP_ONLY=1`、`HOST=0.0.0.0`、`PORT=4173`、绝对路径 `DATA_DIR=/var/lib/xlab-annual-quiz`；不要同时设置 `PUBLIC_ORIGIN`、`TRUSTED_HTTPS_PROXY`、`CAMPUS_PROXY_ONLY` 或 TLS 路径。不要把明文口令发群、写进 Git 或 shell 历史。然后：
 
 ```bash
 sudo chmod 600 /etc/xlab-annual-quiz/game.env

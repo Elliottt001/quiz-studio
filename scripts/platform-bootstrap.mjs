@@ -6,8 +6,8 @@ import { migrate } from "../src/platform/db/migrate.mjs";
 import { createOrganizer } from "../src/platform/organizers/repository.mjs";
 
 export async function bootstrapPlatformOwner(pool, { login, password }) {
-  if (typeof password !== "string" || password.trim().length < 16 || !/[^\d]/u.test(password)) {
-    throw new Error("平台管理员口令至少16字符，不能只是数字");
+  if (typeof password !== "string" || password.trim().length < 6 || !/[^\d]/u.test(password)) {
+    throw new Error("平台管理员口令至少6字符，不能只是数字");
   }
   return withTransaction(pool, async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(760012346)");

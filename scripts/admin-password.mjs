@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { hashAdminPassword } from "../src/server/auth.mjs";
 
 export function makeAdminHash(password) {
-  if (typeof password !== "string" || password.trim().length < 16 || !/[^\d]/u.test(password)) {
-    throw new Error("管理员口令至少16字符，不能只是数字");
+  if (typeof password !== "string" || password.trim().length < 6 || !/[^\d]/u.test(password)) {
+    throw new Error("管理员口令至少6字符，不能只是数字");
   }
   return hashAdminPassword(password);
 }

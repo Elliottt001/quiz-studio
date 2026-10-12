@@ -27,7 +27,7 @@ test("organizer sessions are distinct, revocable, and only platform admin provis
     const cookie = login.headers.get("set-cookie");
     assert.match(cookie, /organizer_session=.*HttpOnly.*SameSite=Strict.*Secure/);
     assert.equal((await post("/v2/organizers", {
-      login: "new-organizer", password: "long-password-3"
+      login: "new-organizer", password: "abc123"
     }, cookie)).status, 201);
     const audit = (await pool.query(`SELECT actor_id,kind,target_id,details_json
       FROM platform_audit_events ORDER BY id DESC LIMIT 1`)).rows[0];

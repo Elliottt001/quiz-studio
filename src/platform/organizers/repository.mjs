@@ -6,7 +6,7 @@ import { httpError } from "../http/errors.mjs";
 export async function createOrganizer(pool, { login, password, platformAdmin = false }) {
   const normalized = typeof login === "string" ? login.trim().toLowerCase() : "";
   if (!/^[a-z0-9-]{3,32}$/.test(normalized)) throw httpError(400, "组织者登录名无效");
-  const hash = await hashPassword(password);
+  const hash = await hashPassword(password, 6);
   const id = randomUUID();
   try {
     await pool.query(`INSERT INTO organizers(id,login,password_hash,platform_admin)

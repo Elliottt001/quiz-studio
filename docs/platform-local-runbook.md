@@ -22,7 +22,7 @@ HOST=127.0.0.1
 PORT=4183
 ```
 
-先执行 `npm run migrate:platform`、`npm run build:platform`，再在交互终端执行 `npm run bootstrap:platform -- owner`；口令至少 16 字符，由终端隐藏读取，初始化成功后用平台账号创建其他组织者。执行 `npm run start:platform`，用 `curl -fsS http://127.0.0.1:4183/v2/health` 检查数据库连通，然后打开 `http://127.0.0.1:4183/organizer` 创建游戏；首页为 `http://127.0.0.1:4183/`，玩家链接由组织者发布后在控制台取得，格式为 `/g/游戏标识`。平台起初**没有任何默认游戏或题目**。没运行 `build:platform` 时服务拒绝启动，不会给玩家一个缺资源的页面。
+先执行 `npm run migrate:platform`、`npm run build:platform`，再在交互终端执行 `npm run bootstrap:platform -- owner`；口令至少 6 字符，由终端隐藏读取，初始化成功后用平台账号创建其他组织者。执行 `npm run start:platform`，用 `curl -fsS http://127.0.0.1:4183/v2/health` 检查数据库连通，然后打开 `http://127.0.0.1:4183/organizer` 创建游戏；首页为 `http://127.0.0.1:4183/`，玩家链接由组织者发布后在控制台取得，格式为 `/g/游戏标识`。平台起初**没有任何默认游戏或题目**。没运行 `build:platform` 时服务拒绝启动，不会给玩家一个缺资源的页面。
 
 联排先使用独立测试游戏，在组织者页面完成“基本信息 → 报名字段 → 轮次题目 → 预览发布”。发布即冻结题目、标准答案、时长和报名字段；只有本场 owner/operator 可手动开启轮次。玩家页须实际显示提交回执编号才算交卷；草稿保存、按钮点击或浏览器超时都不等于成功。要验证整站而不只是健康端点，请在**已有已发布测试游戏**后运行：
 

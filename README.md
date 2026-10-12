@@ -30,7 +30,7 @@ npm start
 - 管理端：`http://127.0.0.1:4173/admin.html`
 - 大屏端：`http://127.0.0.1:4173/display.html`
 
-要使用管理端，先执行 `node scripts/admin-password.mjs`，在本机终端输入至少 16 字符的管理员口令；把**输出的哈希**放进忽略 Git 的 `.env.local`，不要把明文口令写入文件。可参考 [.env.example](/Users/bytedance/Projects/xlab-annual-quiz/.env.example)。运行目录中的 `data/` 和 `.env.local` 均不进入 Git。
+要使用管理端，先执行 `node scripts/admin-password.mjs`，在本机终端输入至少 6 字符的管理员口令；把**输出的哈希**放进忽略 Git 的 `.env.local`，不要把明文口令写入文件。可参考 [.env.example](/Users/bytedance/Projects/xlab-annual-quiz/.env.example)。运行目录中的 `data/` 和 `.env.local` 均不进入 Git。
 
 ## 正式题库
 

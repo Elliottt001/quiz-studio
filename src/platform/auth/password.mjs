@@ -4,9 +4,9 @@ import { httpError } from "../http/errors.mjs";
 
 const scrypt = promisify(scryptCallback);
 
-export async function hashPassword(password) {
-  if (typeof password !== "string" || password.length < 10 || password.length > 128) {
-    throw httpError(400, "密码需要 10–128 个字符");
+export async function hashPassword(password, minLength = 10) {
+  if (typeof password !== "string" || password.length < minLength || password.length > 128) {
+    throw httpError(400, `密码需要 ${minLength}–128 个字符`);
   }
   const salt = randomBytes(16).toString("hex");
   const digest = await scrypt(password, salt, 64);

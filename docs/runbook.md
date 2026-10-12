@@ -14,7 +14,7 @@
 
 ## 2. 启动配置
 
-打开项目根目录，运行 `node --version`，确认主机具备 Node.js 24.19.0+。没有 npm 包下载步骤。运行 `node scripts/admin-password.mjs`；口令至少 16 字符，脚本在交互终端隐藏输入，输出一行哈希。只把哈希放进项目根目录的 `.env.local`：
+打开项目根目录，运行 `node --version`，确认主机具备 Node.js 24.19.0+。没有 npm 包下载步骤。运行 `node scripts/admin-password.mjs`；口令至少 6 字符，脚本在交互终端隐藏输入，输出一行哈希。只把哈希放进项目根目录的 `.env.local`：
 
 ```text
 HOST=0.0.0.0
