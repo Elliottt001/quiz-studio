@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { registerOrganizerRoutes } from "../organizers/routes.mjs";
+import { registerGameRoutes } from "../games/routes.mjs";
 import { httpError } from "./errors.mjs";
 
 const unsafe = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -89,5 +90,6 @@ export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trusted
     }
   });
   registerOrganizerRoutes(app);
+  registerGameRoutes(app);
   return app;
 }
