@@ -109,6 +109,13 @@ export function registerQuizRoutes(app) {
   app.route("GET", new RegExp(`^/v2/games/${slug}/standings$`),
     async ({ params, pool }) => {
       const game = await publishedGame(pool, params[0]);
+      const config = (await pool.query(`SELECT v.config_json FROM games g
+        JOIN game_versions v ON v.game_id=g.id
+          AND v.version=COALESCE(g.published_version,1)
+        WHERE g.id=$1`, [game.id])).rows[0]?.config_json;
+      if (config?.leaderboard === false) {
+        return { body: { players: [], enabled: false } };
+      }
       const rows = (await pool.query(`SELECT p.id,p.display_name,COALESCE(SUM(s.points),0)::int AS score
         FROM players p LEFT JOIN round_scores s
           ON s.game_id=p.game_id AND s.player_id=p.id
@@ -116,7 +123,7 @@ export function registerQuizRoutes(app) {
         ORDER BY score DESC,p.id`, [game.id])).rows;
       let lastScore;
       let rank = 0;
-      return { body: { players: rows.map((row, index) => {
+      return { body: { enabled: true, players: rows.map((row, index) => {
         if (row.score !== lastScore) rank = index + 1;
         lastScore = row.score;
         return { id: row.id, displayName: row.display_name, score: row.score, rank };

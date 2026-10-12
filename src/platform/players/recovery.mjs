@@ -11,6 +11,8 @@ const playerLifetime = 30 * 24 * 60 * 60_000;
 export async function issueRecovery(pool, gameId, playerId, actorId, now) {
   await requireGameRole(pool, gameId, actorId, ["owner", "operator"]);
   return withTransaction(pool, async (client) => {
+    await client.query("SELECT id FROM games WHERE id=$1 FOR UPDATE", [gameId]);
+    await requireGameRole(client, gameId, actorId, ["owner", "operator"]);
     const player = (await client.query(`SELECT id FROM players
       WHERE game_id=$1 AND id=$2`, [gameId, playerId])).rows[0];
     if (!player) throw httpError(404, "本场玩家不存在");

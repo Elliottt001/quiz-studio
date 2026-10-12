@@ -81,6 +81,7 @@ export async function startRound(pool, gameId, roundId, organizerId, now) {
   await requireGameRole(pool, gameId, organizerId, ["owner", "operator"]);
   return withTransaction(pool, async (client) => {
     const game = (await client.query("SELECT status FROM games WHERE id=$1 FOR UPDATE", [gameId])).rows[0];
+    await requireGameRole(client, gameId, organizerId, ["owner", "operator"]);
     if (game?.status !== "published") throw httpError(409, "游戏尚未发布");
     const row = (await client.query("SELECT position,status FROM rounds WHERE game_id=$1 AND id=$2",
       [gameId, roundId])).rows[0];
