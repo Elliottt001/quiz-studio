@@ -6,12 +6,16 @@
     "node": ">=24.19.0 <25"
   },
   "scripts": {
-    "test": "node --test tests/**/*.test.mjs",
+    "test": "node --test tests/server/*.test.mjs tests/platform/archive.test.mjs",
+    "test:platform": "node --test tests/platform/*.test.mjs",
     "build": "node scripts/build.mjs",
     "build:pages": "node scripts/build-pages.mjs",
     "verify:campus": "node scripts/verify-campus.mjs",
     "start": "node --env-file-if-exists=.env.local src/server/main.mjs",
     "dev": "node --env-file-if-exists=.env.local --watch src/server/main.mjs",
     "check": "node --check src/server/main.mjs && node --check public/js/player.mjs && node --check public/js/admin.mjs && node --check public/js/display.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
   }
 }
