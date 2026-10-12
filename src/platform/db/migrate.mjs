@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { withTransaction } from "./pool.mjs";
 
 const migrations = [
-  [1, readFileSync(new URL("./migrations/001_foundation.sql", import.meta.url), "utf8")]
+  [1, readFileSync(new URL("./migrations/001_foundation.sql", import.meta.url), "utf8")],
+  [2, readFileSync(new URL("./migrations/002_platform_audit.sql", import.meta.url), "utf8")]
 ];
 
 export async function migrate(pool) {

@@ -9,8 +9,9 @@ test("fresh migrations are empty, repeatable, and transactions release after rol
   const { pool, close } = await newPlatformFixture({ migrateSchema: false });
   try {
     await migrate(pool);
+    const versions = (await pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n;
     await migrate(pool);
-    assert.equal((await pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n, 1);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM schema_migrations")).rows[0].n, versions);
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM games")).rows[0].n, 0);
     await assert.rejects(withTransaction(pool, async (client) => {
       await client.query("INSERT INTO organizers(id,login,password_hash) VALUES($1,$2,$3)",
