@@ -3,11 +3,14 @@ import { registerOrganizerRoutes } from "../organizers/routes.mjs";
 import { registerGameRoutes } from "../games/routes.mjs";
 import { registerPlayerRoutes } from "../players/routes.mjs";
 import { registerQuizRoutes } from "../quiz/routes.mjs";
+import { settleDueRounds } from "../quiz/repository.mjs";
 import { httpError } from "./errors.mjs";
 
 const unsafe = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trustedHttpsProxy = false } = {}) {
+export function buildPlatformApp({
+  pool, clock = Date.now, publicOrigin, trustedHttpsProxy = false, autoSettle = true
+} = {}) {
   if (!pool) throw new Error("PostgreSQL pool is required");
   if (publicOrigin && (!publicOrigin.startsWith("https://")
     || new URL(publicOrigin).origin !== publicOrigin)) {
@@ -15,6 +18,9 @@ export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trusted
   }
   const routes = [];
   const pending = new Map();
+  let interval;
+  let settling = Promise.resolve();
+  let tickInProgress = false;
   const app = {
     route(method, pattern, handler) {
       routes.push({ method, pattern, handler });
@@ -31,13 +37,25 @@ export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trusted
         server.once("error", reject);
         server.listen(port, host, () => {
           server.off("error", reject);
+          if (autoSettle) {
+            interval = setInterval(() => {
+              if (tickInProgress) return;
+              tickInProgress = true;
+              settling = settleDueRounds(pool, clock(), (slug, id) => app.pendingFor(slug, id))
+                .catch((error) => console.error("Platform settlement failed:", error))
+                .finally(() => { tickInProgress = false; });
+            }, 250);
+            interval.unref();
+          }
           const address = server.address();
           resolve(`http://${host}:${address.port}`);
         });
       });
     },
-    close() {
-      return new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    async close() {
+      clearInterval(interval);
+      await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+      await settling;
     }
   };
   const server = createServer(async (req, res) => {
@@ -107,6 +125,14 @@ export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trusted
         if (left) pending.set(submissionKey, left);
         else pending.delete(submissionKey);
       }
+    }
+  });
+  app.route("GET", /^\/v2\/health$/, async () => {
+    try {
+      await pool.query("SELECT 1");
+      return { body: { ok: true } };
+    } catch {
+      return { status: 503, body: { ok: false } };
     }
   });
   registerOrganizerRoutes(app);
