@@ -14,11 +14,12 @@
     "start:platform": "node --env-file-if-exists=.env.platform src/platform/main.mjs",
     "build": "node scripts/build.mjs",
     "build:platform": "node scripts/build-platform.mjs",
+    "verify:platform": "node scripts/verify-platform.mjs",
     "build:pages": "node scripts/build-pages.mjs",
     "verify:campus": "node scripts/verify-campus.mjs",
     "start": "node --env-file-if-exists=.env.local src/server/main.mjs",
     "dev": "node --env-file-if-exists=.env.local --watch src/server/main.mjs",
-    "check": "node --check src/server/main.mjs && node --check public/js/player.mjs && node --check public/js/admin.mjs && node --check public/js/display.mjs && find src/platform scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check"
+    "check": "node --check src/server/main.mjs && node --check public/js/player.mjs && node --check public/js/admin.mjs && node --check public/js/display.mjs && find src/platform scripts public/platform/js -name '*.mjs' -print0 | xargs -0 -n1 node --check"
   },
   "dependencies": {
     "nes.css": "2.3.0",

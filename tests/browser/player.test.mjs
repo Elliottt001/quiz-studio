@@ -151,3 +151,24 @@ test("one-time recovery, blocked font, Chinese composition and reduced motion re
     await page.close();
   });
 });
+
+test("a device clock two minutes fast still shows the server's live deadline", async () => {
+  await withBrowserFixture(async ({ pool, browser, base }) => {
+    const { game, round, owner } = await publishedGame(pool, false);
+    const page = await browser.newPage({ viewport: { width: 768, height: 900 } });
+    await page.addInitScript(() => {
+      const realNow = Date.now.bind(Date);
+      Date.now = () => realNow() + 120_000;
+    });
+    await join(page, base, game.slug);
+    await startRound(pool, game.id, round.id, owner.id, Date.now());
+    await page.getByRole("button", { name: "进入第 1 轮" }).click();
+    await page.getByRole("button", { name: "提交答卷" }).waitFor();
+    const timer = await page.locator("#round-timer").textContent();
+    const seconds = Number(timer.split(":")[1]);
+    assert.equal(timer.startsWith("00:"), true);
+    assert.ok(seconds >= 15 && seconds <= 30, timer);
+    assert.equal(await page.getByRole("button", { name: "提交答卷" }).isEnabled(), true);
+    await page.close();
+  });
+});
