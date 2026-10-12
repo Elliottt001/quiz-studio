@@ -14,9 +14,13 @@ export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trusted
     throw new Error("PUBLIC_ORIGIN must be an exact HTTPS origin");
   }
   const routes = [];
+  const pending = new Map();
   const app = {
     route(method, pattern, handler) {
       routes.push({ method, pattern, handler });
+    },
+    pendingFor(slug, roundId) {
+      return (pending.get(`${slug}:${roundId}`) ?? 0) > 0;
     },
     listen(port, host = "127.0.0.1") {
       if (!["127.0.0.1", "::1", "localhost"].includes(host)
@@ -37,6 +41,7 @@ export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trusted
     }
   };
   const server = createServer(async (req, res) => {
+    let submissionKey;
     try {
       const url = new URL(req.url, "http://localhost");
       const route = routes.find(({ method, pattern }) => method === req.method && pattern.test(url.pathname));
@@ -61,6 +66,13 @@ export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trusted
         chunks.push(chunk);
       }
       const receivedAt = clock();
+      const incoming = req.method === "POST" && url.pathname.match(
+        /^\/v2\/games\/([a-z0-9-]{3,48})\/rounds\/([0-9a-fA-F-]{36})\/submit$/
+      );
+      if (incoming) {
+        submissionKey = `${incoming[1]}:${incoming[2]}`;
+        pending.set(submissionKey, (pending.get(submissionKey) ?? 0) + 1);
+      }
       if (chunks.length && !req.headers["content-type"]?.startsWith("application/json")) {
         throw httpError(415, "仅支持 JSON 请求");
       }
@@ -89,6 +101,12 @@ export function buildPlatformApp({ pool, clock = Date.now, publicOrigin, trusted
         res.end(JSON.stringify({ error: error.status ? error.message : "服务暂不可用" }));
       }
       if (!error.status) console.error("Platform HTTP error:", error);
+    } finally {
+      if (submissionKey) {
+        const left = pending.get(submissionKey) - 1;
+        if (left) pending.set(submissionKey, left);
+        else pending.delete(submissionKey);
+      }
     }
   });
   registerOrganizerRoutes(app);

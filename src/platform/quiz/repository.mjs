@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { withTransaction } from "../db/pool.mjs";
 import { requireGameRole } from "../games/repository.mjs";
 import { httpError } from "../http/errors.mjs";
+import { scoreChoice } from "./scoring.mjs";
 
 function publicRound(row) {
   return {
@@ -117,4 +119,84 @@ export async function getPublicRound(pool, gameId, roundId) {
     points: q.points, ...(row.status === "published" ? { correctOption: q.correct_option } : {})
   })) : [];
   return { round: publicRound(row), questions };
+}
+
+export async function submitAnswers(pool, { gameId, playerId, roundId, answers, requestKey, receivedAt }) {
+  if (!answers || typeof answers !== "object" || Array.isArray(answers)
+    || typeof requestKey !== "string" || requestKey.length < 1 || requestKey.length > 100
+    || !Number.isSafeInteger(receivedAt)) {
+    throw httpError(400, "答卷或提交标识无效");
+  }
+  return withTransaction(pool, async (client) => {
+    const player = await client.query("SELECT id FROM players WHERE game_id=$1 AND id=$2 FOR UPDATE",
+      [gameId, playerId]);
+    if (!player.rowCount) throw httpError(401, "请加入本场游戏");
+    const prior = (await client.query(`SELECT id,revision,submitted_at,answers_json FROM submissions
+      WHERE game_id=$1 AND player_id=$2 AND round_id=$3 AND request_key=$4`,
+    [gameId, playerId, roundId, requestKey])).rows[0];
+    if (prior) {
+      if (!isDeepStrictEqual(prior.answers_json, answers)) throw httpError(409, "提交标识冲突");
+      return { id: prior.id, revision: prior.revision, submittedAt: Number(prior.submitted_at) };
+    }
+    const round = (await client.query("SELECT status,deadline_at FROM rounds WHERE game_id=$1 AND id=$2",
+      [gameId, roundId])).rows[0];
+    if (!round || !["open", "settling"].includes(round.status)
+      || receivedAt >= Number(round.deadline_at)) throw httpError(409, "本轮已截止");
+    const questions = (await client.query(`SELECT id,options_json FROM questions
+      WHERE game_id=$1 AND round_id=$2`, [gameId, roundId])).rows;
+    const allowed = new Map(questions.map((q) => [q.id, q.options_json.length]));
+    for (const [id, option] of Object.entries(answers)) {
+      if (!allowed.has(id) || !Number.isInteger(option) || option < 0
+        || option >= allowed.get(id)) throw httpError(400, "答卷包含未知题目或无效选项");
+    }
+    const revision = (await client.query(`SELECT COALESCE(MAX(revision),0)+1 AS next
+      FROM submissions WHERE game_id=$1 AND player_id=$2 AND round_id=$3`,
+    [gameId, playerId, roundId])).rows[0].next;
+    const id = randomUUID();
+    await client.query(`INSERT INTO submissions
+      (game_id,id,player_id,round_id,request_key,answers_json,revision,submitted_at)
+      VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8)`,
+    [gameId, id, playerId, roundId, requestKey, JSON.stringify(answers), revision, receivedAt]);
+    return { id, revision, submittedAt: receivedAt };
+  });
+}
+
+export async function settleDueRounds(pool, now, pendingFor = () => false) {
+  const due = (await pool.query(`SELECT r.game_id,r.id,g.slug FROM rounds r JOIN games g ON g.id=r.game_id
+    WHERE r.status IN ('open','settling') AND r.deadline_at<=$1
+    ORDER BY r.game_id,r.position`, [now])).rows;
+  const settled = [];
+  for (const { game_id: gameId, id: roundId, slug } of due) {
+    if (pendingFor(slug, roundId)) continue;
+    const published = await withTransaction(pool, async (client) => {
+      const round = (await client.query(`SELECT status,deadline_at FROM rounds
+        WHERE game_id=$1 AND id=$2 FOR UPDATE SKIP LOCKED`, [gameId, roundId])).rows[0];
+      if (!round || !["open", "settling"].includes(round.status)
+        || Number(round.deadline_at) > now || pendingFor(slug, roundId)) return false;
+      await client.query(`UPDATE rounds SET status='settling' WHERE game_id=$1 AND id=$2`,
+        [gameId, roundId]);
+      const questions = (await client.query(`SELECT id,correct_option,points FROM questions
+        WHERE game_id=$1 AND round_id=$2 ORDER BY position`, [gameId, roundId])).rows;
+      const latest = (await client.query(`SELECT DISTINCT ON (player_id) player_id,answers_json
+        FROM submissions WHERE game_id=$1 AND round_id=$2 ORDER BY player_id,revision DESC`,
+      [gameId, roundId])).rows;
+      for (const submission of latest) {
+        const detail = Object.fromEntries(questions.map((q) =>
+          [q.id, scoreChoice(q, submission.answers_json[q.id])]));
+        const points = Object.values(detail).reduce((total, value) => total + value, 0);
+        await client.query(`INSERT INTO round_scores
+          (game_id,player_id,round_id,points,detail_json) VALUES($1,$2,$3,$4,$5::jsonb)
+          ON CONFLICT(game_id,player_id,round_id)
+          DO UPDATE SET points=excluded.points,detail_json=excluded.detail_json`,
+        [gameId, submission.player_id, roundId, points, JSON.stringify(detail)]);
+      }
+      await client.query(`UPDATE rounds SET status='published',published_at=$3
+        WHERE game_id=$1 AND id=$2`, [gameId, roundId, now]);
+      await client.query(`INSERT INTO audit_events(game_id,actor_id,kind,target_id,occurred_at)
+        VALUES($1,'system','round_published',$2,$3)`, [gameId, roundId, now]);
+      return true;
+    });
+    if (published) settled.push(roundId);
+  }
+  return settled;
 }
