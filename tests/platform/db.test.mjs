@@ -40,8 +40,8 @@ test("a question cannot reference a round from another game", async () => {
     await pool.query(`INSERT INTO rounds(game_id,id,position,title,duration_ms,config_version)
       VALUES($1,$2,1,'Round',90000,1)`, [gameA, roundA]);
     await assert.rejects(pool.query(`INSERT INTO questions
-      (game_id,id,round_id,position,kind,prompt,options_json,correct_option,points)
-      VALUES($1,$2,$3,1,'choice','Q','["A","B"]',0,7)`,
+      (game_id,id,round_id,position,kind,prompt,options_json,correct_option,points,answer_rule_json)
+      VALUES($1,$2,$3,1,'choice','Q','["A","B"]',0,7,'{"correctOption":0}')`,
     [gameB, randomUUID(), roundA]), (error) => error.code === "23503");
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM questions")).rows[0].n, 0);
   } finally {

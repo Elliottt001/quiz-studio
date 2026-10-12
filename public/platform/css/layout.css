@@ -1,0 +1,376 @@
+.entry-layout {
+  width: min(100% - 36px, 1040px);
+  margin: 0 auto;
+  padding: clamp(70px, 14vh, 160px) 0 72px;
+}
+
+.entry-card {
+  max-width: 740px;
+  padding: clamp(24px, 5vw, 64px);
+  background: #fffdf7;
+  box-shadow: 12px 12px 0 var(--ink);
+}
+
+.level-chip,
+.eyebrow {
+  display: inline-block;
+  color: var(--ink-soft);
+  font-size: 12px;
+  letter-spacing: .13em;
+}
+
+.level-chip {
+  padding: 8px 12px;
+  border: 3px solid var(--line);
+  background: var(--mint);
+  color: var(--ink);
+}
+
+.pixel-heading {
+  margin: 28px 0 24px;
+  font-size: clamp(26px, 4vw, 44px);
+  line-height: 1.45;
+  letter-spacing: .04em;
+}
+
+.entry-card .nes-btn {
+  margin-top: 24px;
+}
+
+.entry-note {
+  margin-top: 36px;
+  color: var(--ink-soft);
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px clamp(18px, 4vw, 56px);
+  border-bottom: 4px solid var(--line);
+  background: #fffdf7;
+}
+
+.wordmark {
+  color: var(--ink);
+  font-size: 18px;
+  text-decoration: none;
+}
+
+.header-meta {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.app-shell {
+  width: min(100% - 36px, 1140px);
+  margin: 0 auto;
+  padding: 52px 0 96px;
+}
+
+.studio-panel {
+  width: 100%;
+  margin: 0 0 30px;
+  padding: clamp(18px, 3vw, 40px);
+  background: #fffdf7;
+  box-shadow: 9px 9px 0 var(--ink);
+}
+
+.pixel-subtitle {
+  margin: 12px 0;
+  font: 20px/1.5 var(--pixel-font);
+}
+
+.toolbar,
+.step-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.step-button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 3px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.step-button.is-active {
+  background: var(--mint);
+  box-shadow: 4px 4px 0 var(--line);
+}
+
+.form-stack,
+.field-list,
+.question-list {
+  display: grid;
+  gap: 20px;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 16px 0;
+  font-weight: 700;
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.form-field textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.check-field input {
+  width: 22px;
+  height: 22px;
+}
+
+.status-line {
+  min-height: 26px;
+  margin: 18px 0;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.game-grid,
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 22px;
+  margin-top: 26px;
+}
+
+.game-tile,
+.field-row,
+.round-row,
+.preview-round {
+  min-width: 0;
+  padding: 20px;
+  border: 3px solid var(--line);
+  background: var(--paper);
+}
+
+.round-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.round-chip {
+  padding: 5px 10px;
+  border: 2px solid var(--line);
+  background: var(--mint);
+}
+
+.field-row,
+.round-row {
+  margin: 18px 0;
+}
+
+.round-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.round-row strong {
+  flex: 1 1 180px;
+}
+
+.round-form {
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 4px dashed var(--line);
+}
+
+.question-editor {
+  min-width: 0;
+  margin: 18px 0;
+  padding: 20px;
+  background: #fffdf7;
+}
+
+.preview-option {
+  display: block;
+  padding: 8px 10px;
+  margin: 8px 0;
+  border: 2px solid var(--line);
+}
+
+.control-form {
+  margin-top: 28px;
+}
+
+.player-identity {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 22px;
+  border-bottom: 3px dashed var(--line);
+}
+
+.player-identity strong {
+  font: 20px/1.5 var(--pixel-font);
+}
+
+.pixel-timer {
+  display: inline-block;
+  padding: 10px 16px;
+  margin: 12px 0 26px;
+  border: 4px solid var(--line);
+  background: var(--mint);
+  font: 28px/1.2 var(--pixel-font);
+}
+
+.play-questions {
+  display: grid;
+  gap: 22px;
+  margin-bottom: 32px;
+}
+
+.play-question {
+  min-width: 0;
+  padding: 20px;
+  border: 3px solid var(--line);
+  background: var(--paper);
+}
+
+.question-title {
+  max-width: 100%;
+  padding: 0 10px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.answer-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 12px;
+  margin: 10px 0;
+  border: 2px solid var(--line);
+  background: #fffdf7;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.answer-option:has(input:checked) {
+  background: var(--mint);
+  box-shadow: 4px 4px 0 var(--line);
+}
+
+.answer-option input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}
+
+.round-score {
+  display: block;
+  margin: 24px 0;
+  font: 24px/1.5 var(--pixel-font);
+}
+
+.score-board {
+  padding: 0;
+  list-style: none;
+}
+
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 2px solid var(--line);
+}
+
+.help {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 520px) {
+  .entry-layout,
+  .app-shell {
+    width: min(100% - 28px, 1140px);
+  }
+
+  .entry-card {
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+
+  .site-header {
+    padding: 16px 14px;
+  }
+
+  .header-meta {
+    display: none;
+  }
+
+  .studio-panel {
+    padding: 16px;
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+
+  .step-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .step-button {
+    min-width: 0;
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .nes-btn {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .play-question {
+    padding: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

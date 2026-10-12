@@ -1,0 +1,64 @@
+@font-face {
+  font-family: "Fusion Pixel";
+  src: url("../fonts/fusion-pixel-zh-hans.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --paper: #f8f2df;
+  --paper-deep: #eedcba;
+  --ink: #172843;
+  --ink-soft: #385069;
+  --coral: #ea6344;
+  --mint: #5cc3a4;
+  --line: #172843;
+  --pixel-font: "Fusion Pixel", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --body-font: "PingFang SC", "Microsoft YaHei", sans-serif;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 18%, rgba(92, 195, 164, .18), transparent 26%),
+    linear-gradient(135deg, rgba(234, 99, 68, .12), transparent 46%),
+    repeating-linear-gradient(0deg, transparent 0 27px, rgba(23, 40, 67, .04) 28px 29px),
+    var(--paper);
+  font: 16px/1.6 var(--body-font);
+}
+
+.pixel-heading,
+.wordmark,
+.eyebrow,
+.level-chip,
+button,
+.nes-btn {
+  font-family: var(--pixel-font);
+  font-synthesis: none;
+}
+
+.readable,
+input,
+select,
+textarea {
+  font-family: var(--body-font);
+  font-size: 16px;
+}
+
+button,
+.nes-btn {
+  min-height: 44px;
+}

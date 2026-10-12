@@ -1,4 +1,5 @@
 import { createPlatformPool } from "./db/pool.mjs";
+import { resolve } from "node:path";
 import { migrate } from "./db/migrate.mjs";
 import { buildPlatformApp } from "./http/app.mjs";
 
@@ -9,7 +10,8 @@ try {
   const app = buildPlatformApp({
     pool,
     publicOrigin: process.env.PUBLIC_ORIGIN,
-    trustedHttpsProxy: process.env.TRUSTED_HTTPS_PROXY === "1"
+    trustedHttpsProxy: process.env.TRUSTED_HTTPS_PROXY === "1",
+    staticDir: resolve("dist-platform")
   });
   const host = process.env.HOST ?? "127.0.0.1";
   const address = await app.listen(Number(process.env.PORT ?? 4183), host);

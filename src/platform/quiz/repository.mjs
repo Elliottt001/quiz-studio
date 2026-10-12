@@ -3,7 +3,9 @@ import { isDeepStrictEqual } from "node:util";
 import { withTransaction } from "../db/pool.mjs";
 import { requireGameRole } from "../games/repository.mjs";
 import { httpError } from "../http/errors.mjs";
-import { scoreChoice } from "./scoring.mjs";
+import { validateAnswer } from "./rules.mjs";
+import { rescoreRound } from "./corrections.mjs";
+import { bumpDraftVersion, publishFrozen } from "./editor.mjs";
 
 function publicRound(row) {
   return {
@@ -45,47 +47,41 @@ export async function createRound(pool, gameId, organizerId, input) {
   await requireGameRole(pool, gameId, organizerId, ["owner"]);
   validateRound(input);
   return withTransaction(pool, async (client) => {
-    const game = (await client.query("SELECT status FROM games WHERE id=$1 FOR UPDATE", [gameId])).rows[0];
+    const game = (await client.query(`SELECT status,current_version FROM games
+      WHERE id=$1 FOR UPDATE`, [gameId])).rows[0];
     if (game?.status !== "draft") throw httpError(409, "游戏发布后不能新增轮次");
     const count = (await client.query("SELECT count(*)::int AS n FROM rounds WHERE game_id=$1",
       [gameId])).rows[0].n;
     if (input.position !== count + 1) throw httpError(400, "轮次序号须连续");
     const row = (await client.query(`INSERT INTO rounds
-      (game_id,id,position,title,duration_ms,config_version) VALUES($1,$2,$3,$4,$5,1) RETURNING *`,
-    [gameId, randomUUID(), input.position, input.title.trim(), input.durationMs])).rows[0];
+      (game_id,id,position,title,duration_ms,config_version) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [gameId, randomUUID(), input.position, input.title.trim(), input.durationMs,
+      game.current_version])).rows[0];
     for (const question of input.questions) {
       await client.query(`INSERT INTO questions
-        (game_id,id,round_id,position,kind,prompt,options_json,correct_option,points)
-        VALUES($1,$2,$3,$4,'choice',$5,$6::jsonb,$7,$8)`,
+        (game_id,id,round_id,position,kind,prompt,options_json,correct_option,points,answer_rule_json)
+        VALUES($1,$2,$3,$4,'choice',$5,$6::jsonb,$7,$8,$9::jsonb)`,
       [gameId, randomUUID(), row.id, question.position, question.prompt.trim(),
         JSON.stringify(question.options.map((option) => option.trim())),
-        question.correctOption, question.points]);
+        question.correctOption, question.points,
+        JSON.stringify({ correctOption: question.correctOption })]);
     }
-    await client.query(`INSERT INTO audit_events(game_id,actor_id,kind,target_id,occurred_at)
-      VALUES($1,$2,'round_created',$3,$4)`, [gameId, organizerId, row.id, Date.now()]);
+    await bumpDraftVersion(client, gameId, game.current_version, organizerId,
+      "round_created", row.id, Date.now());
     return publicRound(row);
   });
 }
 
 export async function publishGame(pool, gameId, organizerId) {
-  await requireGameRole(pool, gameId, organizerId, ["owner"]);
-  return withTransaction(pool, async (client) => {
-    const game = (await client.query("SELECT * FROM games WHERE id=$1 FOR UPDATE", [gameId])).rows[0];
-    if (game?.status !== "draft") throw httpError(409, "游戏已发布");
-    const count = (await client.query("SELECT count(*)::int AS n FROM rounds WHERE game_id=$1",
-      [gameId])).rows[0].n;
-    if (!count) throw httpError(409, "至少配置一个完整轮次");
-    await client.query("UPDATE games SET status='published' WHERE id=$1", [gameId]);
-    await client.query(`INSERT INTO audit_events(game_id,actor_id,kind,target_id,occurred_at)
-      VALUES($1,$2,'game_published',$3,$4)`, [gameId, organizerId, gameId, Date.now()]);
-    return { id: gameId, status: "published" };
-  });
+  const published = await publishFrozen(pool, gameId, organizerId);
+  return { id: published.gameId, status: published.status };
 }
 
 export async function startRound(pool, gameId, roundId, organizerId, now) {
   await requireGameRole(pool, gameId, organizerId, ["owner", "operator"]);
   return withTransaction(pool, async (client) => {
     const game = (await client.query("SELECT status FROM games WHERE id=$1 FOR UPDATE", [gameId])).rows[0];
+    await requireGameRole(client, gameId, organizerId, ["owner", "operator"]);
     if (game?.status !== "published") throw httpError(409, "游戏尚未发布");
     const row = (await client.query("SELECT position,status FROM rounds WHERE game_id=$1 AND id=$2",
       [gameId, roundId])).rows[0];
@@ -112,13 +108,47 @@ export async function getPublicRound(pool, gameId, roundId) {
     [gameId, roundId])).rows[0];
   if (!row) throw httpError(404, "轮次不存在");
   const visible = ["open", "published"].includes(row.status);
-  const questions = visible ? (await pool.query(`SELECT id,position,kind,prompt,options_json,
-    correct_option,points FROM questions WHERE game_id=$1 AND round_id=$2 ORDER BY position`,
+  const questions = visible ? (await pool.query(`SELECT q.id,q.position,q.kind,q.prompt,
+    q.options_json,q.correct_option,q.answer_rule_json,q.points,
+    v.question_id AS voided FROM questions q
+    LEFT JOIN voided_questions v ON v.game_id=q.game_id AND v.question_id=q.id
+    WHERE q.game_id=$1 AND q.round_id=$2 ORDER BY q.position`,
   [gameId, roundId])).rows.map((q) => ({
-    id: q.id, position: q.position, kind: q.kind, prompt: q.prompt, options: q.options_json,
-    points: q.points, ...(row.status === "published" ? { correctOption: q.correct_option } : {})
+    id: q.id, position: q.position, kind: q.kind, prompt: q.prompt,
+    points: q.points,
+    ...(row.status === "published" ? { voided: !!q.voided } : {}),
+    ...(q.options_json ? { options: q.options_json } : {}),
+    ...(q.kind === "length" ? { answerRule: q.answer_rule_json } : {}),
+    ...(row.status === "published" && q.kind !== "length"
+      ? { answerRule: q.answer_rule_json,
+        ...(q.kind === "choice" ? { correctOption: q.correct_option } : {}) }
+      : {})
   })) : [];
   return { round: publicRound(row), questions };
+}
+
+function mapQuestion(row) {
+  return {
+    id: row.id, kind: row.kind, points: row.points,
+    ...(row.options_json ? { options: row.options_json } : {}),
+    answerRule: row.answer_rule_json
+  };
+}
+
+export async function validateRoundAnswers(client, gameId, roundId, answers) {
+  if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
+    throw httpError(400, "答卷格式无效");
+  }
+  const rows = (await client.query(`SELECT id,kind,options_json,answer_rule_json,points
+    FROM questions WHERE game_id=$1 AND round_id=$2`,
+  [gameId, roundId])).rows;
+  const questions = new Map(rows.map((row) => [row.id, mapQuestion(row)]));
+  for (const [id, value] of Object.entries(answers)) {
+    const question = questions.get(id);
+    if (!question) throw httpError(400, "答卷包含未知题目");
+    validateAnswer(question, value);
+  }
+  return questions;
 }
 
 export async function submitAnswers(pool, { gameId, playerId, roundId, answers, requestKey, receivedAt }) {
@@ -142,13 +172,7 @@ export async function submitAnswers(pool, { gameId, playerId, roundId, answers, 
       [gameId, roundId])).rows[0];
     if (!round || !["open", "settling"].includes(round.status)
       || receivedAt >= Number(round.deadline_at)) throw httpError(409, "本轮已截止");
-    const questions = (await client.query(`SELECT id,options_json FROM questions
-      WHERE game_id=$1 AND round_id=$2`, [gameId, roundId])).rows;
-    const allowed = new Map(questions.map((q) => [q.id, q.options_json.length]));
-    for (const [id, option] of Object.entries(answers)) {
-      if (!allowed.has(id) || !Number.isInteger(option) || option < 0
-        || option >= allowed.get(id)) throw httpError(400, "答卷包含未知题目或无效选项");
-    }
+    await validateRoundAnswers(client, gameId, roundId, answers);
     const revision = (await client.query(`SELECT COALESCE(MAX(revision),0)+1 AS next
       FROM submissions WHERE game_id=$1 AND player_id=$2 AND round_id=$3`,
     [gameId, playerId, roundId])).rows[0].next;
@@ -175,21 +199,7 @@ export async function settleDueRounds(pool, now, pendingFor = () => false) {
         || Number(round.deadline_at) > now || pendingFor(slug, roundId)) return false;
       await client.query(`UPDATE rounds SET status='settling' WHERE game_id=$1 AND id=$2`,
         [gameId, roundId]);
-      const questions = (await client.query(`SELECT id,correct_option,points FROM questions
-        WHERE game_id=$1 AND round_id=$2 ORDER BY position`, [gameId, roundId])).rows;
-      const latest = (await client.query(`SELECT DISTINCT ON (player_id) player_id,answers_json
-        FROM submissions WHERE game_id=$1 AND round_id=$2 ORDER BY player_id,revision DESC`,
-      [gameId, roundId])).rows;
-      for (const submission of latest) {
-        const detail = Object.fromEntries(questions.map((q) =>
-          [q.id, scoreChoice(q, submission.answers_json[q.id])]));
-        const points = Object.values(detail).reduce((total, value) => total + value, 0);
-        await client.query(`INSERT INTO round_scores
-          (game_id,player_id,round_id,points,detail_json) VALUES($1,$2,$3,$4,$5::jsonb)
-          ON CONFLICT(game_id,player_id,round_id)
-          DO UPDATE SET points=excluded.points,detail_json=excluded.detail_json`,
-        [gameId, submission.player_id, roundId, points, JSON.stringify(detail)]);
-      }
+      await rescoreRound(client, gameId, roundId);
       await client.query(`UPDATE rounds SET status='published',published_at=$3
         WHERE game_id=$1 AND id=$2`, [gameId, roundId, now]);
       await client.query(`INSERT INTO audit_events(game_id,actor_id,kind,target_id,occurred_at)

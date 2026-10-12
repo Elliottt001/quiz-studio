@@ -3,6 +3,7 @@ import { withTransaction } from "../db/pool.mjs";
 import { hashPassword, verifyPassword } from "../auth/password.mjs";
 import { cookieValue, newToken, tokenHash } from "../auth/sessions.mjs";
 import { httpError } from "../http/errors.mjs";
+import { validateProfile } from "./profile.mjs";
 
 const playerLifetimeMs = 30 * 24 * 60 * 60_000;
 
@@ -16,6 +17,13 @@ export async function publishedGame(pool, slug) {
 export async function registerPlayer(pool, gameId, input) {
   const displayName = typeof input?.displayName === "string" ? input.displayName.trim() : "";
   if (!displayName || displayName.length > 40) throw httpError(400, "请填写有效展示名");
+  const published = (await pool.query(`SELECT published_version FROM games
+    WHERE id=$1 AND status='published'`, [gameId])).rows[0];
+  if (!published) throw httpError(404, "游戏不存在或尚未开放");
+  const config = (await pool.query(`SELECT config_json FROM game_versions
+    WHERE game_id=$1 AND version=$2`, [gameId, published.published_version ?? 1]))
+    .rows[0]?.config_json ?? {};
+  const profile = validateProfile(config.fields ?? [], input?.profile ?? {});
   const passwordHash = await hashPassword(input?.password);
   return withTransaction(pool, async (client) => {
     const game = (await client.query(`SELECT id FROM games WHERE id=$1 AND status='published'`,
@@ -25,8 +33,10 @@ export async function registerPlayer(pool, gameId, input) {
     const loginCode = randomBytes(8).toString("hex").toUpperCase();
     const sessionToken = newToken();
     const now = Date.now();
-    await client.query(`INSERT INTO players(game_id,id,display_name,login_code,password_hash,created_at)
-      VALUES($1,$2,$3,$4,$5,$6)`, [gameId, playerId, displayName, loginCode, passwordHash, now]);
+    await client.query(`INSERT INTO players
+      (game_id,id,display_name,login_code,password_hash,profile_json,created_at)
+      VALUES($1,$2,$3,$4,$5,$6::jsonb,$7)`,
+    [gameId, playerId, displayName, loginCode, passwordHash, JSON.stringify(profile), now]);
     await client.query(`INSERT INTO player_sessions
       (token_hash,game_id,player_id,created_at,expires_at) VALUES($1,$2,$3,$4,$5)`,
     [tokenHash(sessionToken), gameId, playerId, now, now + playerLifetimeMs]);

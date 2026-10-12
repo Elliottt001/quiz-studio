@@ -1,3 +1,3 @@
-export function httpError(status, message) {
-  return Object.assign(new Error(message), { status });
+export function httpError(status, message, details = {}) {
+  return Object.assign(new Error(message), { status, details });
 }

@@ -102,3 +102,29 @@ test("two game cookies coexist and a logout only revokes the selected session", 
     await close();
   }
 });
+
+test("player session status reports only this game's authentication without a 401 probe", async () => {
+  const { pool, close } = await newPlatformFixture();
+  const { gameA, gameB } = await joinableGames(pool);
+  const registered = await registerPlayer(pool, gameA.id, {
+    displayName: "Player", password: "player-password-1"
+  });
+  const cookie = `game_session_${gameA.slug}=${registered.sessionToken}`;
+  const app = buildPlatformApp({ pool, autoSettle: false });
+  const base = await app.listen(0);
+  try {
+    const status = (slug, headers = {}) =>
+      fetch(base + `/v2/games/${slug}/session`, { headers });
+    const visitor = await status(gameA.slug);
+    assert.equal(visitor.status, 200);
+    assert.deepEqual(await visitor.json(), { authenticated: false });
+    assert.deepEqual(await (await status(gameA.slug, { cookie })).json(),
+      { authenticated: true });
+    assert.deepEqual(await (await status(gameB.slug, { cookie })).json(),
+      { authenticated: false });
+    assert.equal((await fetch(base + `/v2/games/${gameA.slug}/me`)).status, 401);
+  } finally {
+    await app.close();
+    await close();
+  }
+});
