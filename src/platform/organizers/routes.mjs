@@ -7,6 +7,15 @@ import { withTransaction } from "../db/pool.mjs";
 
 export function registerOrganizerRoutes(app) {
   const failures = new Map();
+  app.route("GET", /^\/v2\/auth\/status$/, async ({ req, pool }) => {
+    try {
+      await requireOrganizer(pool, req);
+      return { body: { authenticated: true } };
+    } catch (error) {
+      if (error.status !== 401) throw error;
+      return { body: { authenticated: false } };
+    }
+  });
   app.route("POST", /^\/v2\/auth\/login$/, async ({ body, pool, clock, secure, req }) => {
     const login = typeof body.login === "string" ? body.login.trim().toLowerCase() : "";
     const key = `${login}:${req.socket.remoteAddress}`;

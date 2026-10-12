@@ -59,3 +59,28 @@ test("password hashing does not block the event loop", async () => {
   await hashing;
   assert.equal(ticked, true);
 });
+
+test("read-only session status avoids an expected 401 while leaving management routes protected", async () => {
+  const { pool, close } = await newPlatformFixture();
+  await createOrganizer(pool, { login: "owner", password: "owner-password-1" });
+  const app = buildPlatformApp({ pool, autoSettle: false });
+  const base = await app.listen(0);
+  try {
+    const unknown = await fetch(base + "/v2/auth/status");
+    assert.equal(unknown.status, 200);
+    assert.deepEqual(await unknown.json(), { authenticated: false });
+    assert.equal((await fetch(base + "/v2/games")).status, 401);
+    const login = await fetch(base + "/v2/auth/login", {
+      method: "POST", headers: { "x-quiz-action": "1", "content-type": "application/json" },
+      body: JSON.stringify({ login: "owner", password: "owner-password-1" })
+    });
+    assert.equal(login.status, 200);
+    const valid = await fetch(base + "/v2/auth/status", {
+      headers: { cookie: login.headers.get("set-cookie") }
+    });
+    assert.deepEqual(await valid.json(), { authenticated: true });
+  } finally {
+    await app.close();
+    await close();
+  }
+});

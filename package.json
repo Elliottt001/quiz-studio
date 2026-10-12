@@ -8,6 +8,7 @@
   "scripts": {
     "test": "node --test tests/server/*.test.mjs tests/platform/archive.test.mjs",
     "test:platform": "node --test tests/platform/*.test.mjs",
+    "test:browser": "node --test tests/browser/*.test.mjs",
     "migrate:platform": "node --env-file-if-exists=.env.platform scripts/platform-migrate.mjs",
     "bootstrap:platform": "node --env-file-if-exists=.env.platform scripts/platform-bootstrap.mjs",
     "start:platform": "node --env-file-if-exists=.env.platform src/platform/main.mjs",
@@ -22,5 +23,8 @@
   "dependencies": {
     "nes.css": "2.3.0",
     "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
   }
 }

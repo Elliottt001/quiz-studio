@@ -32,5 +32,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run test:platform
+      - run: npm run build:platform
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
       - run: npm run check
       - run: npm run build
