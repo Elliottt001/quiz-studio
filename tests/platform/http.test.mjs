@@ -22,6 +22,8 @@ test("HTTP boundary rejects untrusted, malformed, or oversized changes before th
     assert.equal((await post('{"ok":true}', { origin: "" })).status, 403);
     assert.equal((await post('{"ok":true}', { "x-quiz-action": "0" })).status, 403);
     assert.equal((await post("{")).status, 400);
+    assert.equal((await post("null")).status, 400);
+    assert.equal((await post("[]")).status, 400);
     assert.equal((await post(JSON.stringify({ text: "x".repeat(65_536) }))).status, 413);
     assert.equal(calls, 0);
     const accepted = await post('{"ok":true}');

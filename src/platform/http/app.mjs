@@ -100,6 +100,9 @@ export function buildPlatformApp({
       } catch {
         throw httpError(400, "JSON 格式无效");
       }
+      if (unsafe.has(req.method) && (!body || typeof body !== "object" || Array.isArray(body))) {
+        throw httpError(400, "请求体必须是 JSON 对象");
+      }
       const match = url.pathname.match(route.pattern);
       const result = await route.handler({
         req, body, params: match.slice(1), receivedAt, pool, clock, secure: !!publicOrigin

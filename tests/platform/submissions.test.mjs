@@ -99,3 +99,43 @@ test("a database failure cannot return a success receipt or consume a revision",
     await close();
   }
 });
+
+test("simultaneous retries with the same key commit only one answer and return one receipt", async () => {
+  const { pool, close } = await newPlatformFixture();
+  try {
+    const { game, round, player, question } = await prepared(pool, 1);
+    const input = { gameId: game.id, playerId: player.playerId, roundId: round.id,
+      answers: { [question]: 1 }, requestKey: "same", receivedAt: 30_999 };
+    let releaseFirst;
+    let selects = 0;
+    const secondRead = new Promise((resolve) => { releaseFirst = resolve; });
+    const interleaved = {
+      async connect() {
+        const client = await pool.connect();
+        return {
+          release: client.release.bind(client),
+          async query(sql, values) {
+            const result = await client.query(sql, values);
+            if (typeof sql === "string" && sql.includes("COALESCE(MAX(revision)")) {
+              selects++;
+              if (selects === 1) {
+                await Promise.race([secondRead,
+                  new Promise((resolve) => setTimeout(resolve, 100))]);
+              } else if (selects === 2) {
+                releaseFirst();
+              }
+            }
+            return result;
+          }
+        };
+      }
+    };
+    const results = await Promise.all(Array.from({ length: 8 }, () => submitAnswers(interleaved, input)));
+    assert.equal(new Set(results.map((receipt) => receipt.id)).size, 1);
+    assert.deepEqual(new Set(results.map((receipt) => receipt.revision)), new Set([1]));
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM submissions WHERE game_id=$1",
+      [game.id])).rows[0].n, 1);
+  } finally {
+    await close();
+  }
+});
