@@ -1,6 +1,6 @@
 <div align="center">
 
-# X-Lab Quiz Studio
+# Quiz Studio
 
 ### 把一场问答活动，从空白配置到现场结算，放进一个链接里。
 
