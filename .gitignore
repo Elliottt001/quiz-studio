@@ -13,3 +13,7 @@ test-results/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+# Local developer tooling
+.cjadk/
+.codex/
+log/app.log

@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { hashAdminPassword } from "../src/server/auth.mjs";
 
 export function makeAdminHash(password) {
-  if (typeof password !== "string" || password.trim().length < 16 || !/[^\d]/u.test(password)) {
-    throw new Error("管理员口令至少16字符，不能只是数字");
+  if (typeof password !== "string" || password.trim().length < 6 || !/[^\d]/u.test(password)) {
+    throw new Error("管理员口令至少6字符，不能只是数字");
   }
   return hashAdminPassword(password);
 }
@@ -17,23 +17,30 @@ async function readHidden(prompt) {
   stdin.resume();
   let value = "";
   try {
-    for await (const chunk of stdin) {
-      const characters = chunk.toString("utf8");
-      for (const character of characters) {
-        if (character === "\r" || character === "\n") {
-          stderr.write("\n");
-          return value;
+    return await new Promise((resolve, reject) => {
+      const onData = (chunk) => {
+        for (const character of chunk.toString("utf8")) {
+          if (character === "\r" || character === "\n") {
+            stdin.off("data", onData);
+            stderr.write("\n");
+            resolve(value);
+            return;
+          }
+          if (character === "\u0003") {
+            stdin.off("data", onData);
+            reject(new Error("已取消"));
+            return;
+          }
+          if (character === "\u007f") { value = value.slice(0, -1); continue; }
+          value += character;
         }
-        if (character === "\u0003") throw new Error("已取消");
-        if (character === "\u007f") { value = value.slice(0, -1); continue; }
-        value += character;
-      }
-    }
+      };
+      stdin.on("data", onData);
+    });
   } finally {
     stdin.setRawMode(false);
     stdin.pause();
   }
-  throw new Error("未收到口令");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
