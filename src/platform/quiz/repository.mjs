@@ -4,6 +4,7 @@ import { withTransaction } from "../db/pool.mjs";
 import { requireGameRole } from "../games/repository.mjs";
 import { httpError } from "../http/errors.mjs";
 import { scoreChoice } from "./scoring.mjs";
+import { bumpDraftVersion, publishFrozen } from "./editor.mjs";
 
 function publicRound(row) {
   return {
@@ -45,14 +46,16 @@ export async function createRound(pool, gameId, organizerId, input) {
   await requireGameRole(pool, gameId, organizerId, ["owner"]);
   validateRound(input);
   return withTransaction(pool, async (client) => {
-    const game = (await client.query("SELECT status FROM games WHERE id=$1 FOR UPDATE", [gameId])).rows[0];
+    const game = (await client.query(`SELECT status,current_version FROM games
+      WHERE id=$1 FOR UPDATE`, [gameId])).rows[0];
     if (game?.status !== "draft") throw httpError(409, "游戏发布后不能新增轮次");
     const count = (await client.query("SELECT count(*)::int AS n FROM rounds WHERE game_id=$1",
       [gameId])).rows[0].n;
     if (input.position !== count + 1) throw httpError(400, "轮次序号须连续");
     const row = (await client.query(`INSERT INTO rounds
-      (game_id,id,position,title,duration_ms,config_version) VALUES($1,$2,$3,$4,$5,1) RETURNING *`,
-    [gameId, randomUUID(), input.position, input.title.trim(), input.durationMs])).rows[0];
+      (game_id,id,position,title,duration_ms,config_version) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [gameId, randomUUID(), input.position, input.title.trim(), input.durationMs,
+      game.current_version])).rows[0];
     for (const question of input.questions) {
       await client.query(`INSERT INTO questions
         (game_id,id,round_id,position,kind,prompt,options_json,correct_option,points,answer_rule_json)
@@ -62,25 +65,15 @@ export async function createRound(pool, gameId, organizerId, input) {
         question.correctOption, question.points,
         JSON.stringify({ correctOption: question.correctOption })]);
     }
-    await client.query(`INSERT INTO audit_events(game_id,actor_id,kind,target_id,occurred_at)
-      VALUES($1,$2,'round_created',$3,$4)`, [gameId, organizerId, row.id, Date.now()]);
+    await bumpDraftVersion(client, gameId, game.current_version, organizerId,
+      "round_created", row.id, Date.now());
     return publicRound(row);
   });
 }
 
 export async function publishGame(pool, gameId, organizerId) {
-  await requireGameRole(pool, gameId, organizerId, ["owner"]);
-  return withTransaction(pool, async (client) => {
-    const game = (await client.query("SELECT * FROM games WHERE id=$1 FOR UPDATE", [gameId])).rows[0];
-    if (game?.status !== "draft") throw httpError(409, "游戏已发布");
-    const count = (await client.query("SELECT count(*)::int AS n FROM rounds WHERE game_id=$1",
-      [gameId])).rows[0].n;
-    if (!count) throw httpError(409, "至少配置一个完整轮次");
-    await client.query("UPDATE games SET status='published' WHERE id=$1", [gameId]);
-    await client.query(`INSERT INTO audit_events(game_id,actor_id,kind,target_id,occurred_at)
-      VALUES($1,$2,'game_published',$3,$4)`, [gameId, organizerId, gameId, Date.now()]);
-    return { id: gameId, status: "published" };
-  });
+  const published = await publishFrozen(pool, gameId, organizerId);
+  return { id: published.gameId, status: published.status };
 }
 
 export async function startRound(pool, gameId, roundId, organizerId, now) {
